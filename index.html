@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>AlmostC64 v0.1</title>
+
+    <script src="js/jquery-3.4.1.min.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/cia.js"></script>
+    <script src="js/vic.js"></script>
+    <script src="js/c64mmu.js"></script>
+    <script src="js/cpu6510.js"></script>
+    <script src="js/main.js"></script>
+
+    <!--<link rel="stylesheet" type="text/css" href="css/main.css" />-->
+</head>
+<body>
+
+AlmostC64 v0.1 - <span id="fpsSpan">-</span><br/>
+
+<canvas id="mainCanvass" width="900" height="600" style="float:left"></canvas>
+
+<br/>
+<textarea id="nestestLog" name="nestestLog" cols="120" rows="5" style="display:none;"></textarea>
+
+<br/>
+<span style="float:left;clear:both;">Press "f" to start rom execution. Arrows to move, and "o" and "p" as "a" and "b". "k" is start</span>
+
+</body>
+</html>
