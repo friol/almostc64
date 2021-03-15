@@ -7,7 +7,11 @@ class cpu6510
         this.mmu=theMmu;
         this.mousePosx=0;
         this.mousePosy=0;
+        
         this.nmiPending=false;
+        this.vicIrqPending=false;
+        this.ciaIrqPending=false;
+        
         this.CPUstarted=false;
 
         // instr. table - instr. dimension in bytes, instr. cycles
@@ -187,33 +191,6 @@ class cpu6510
         this.instructionTable[0xFE]=[3,7,`INC %d,X`];
     }
 
-    /*loadGoldenLog(fileName)
-    {
-        this.goldenLog=new Array();
-        this.goldenLogIdx=0;
-
-        var thisInstance=this;
-
-        $.ajax({
-            url: fileName,
-            type: "GET",
-            processData: false,
-            success: function(data) 
-            {
-                var txt=data.split(/\r?\n/);
-
-                for (var l=0;l<txt.length;l++)
-                {
-                    thisInstance.goldenLog.push(txt[l]);
-                }
-            },
-            error: function(xhr, status, error)
-            {
-                alert("error loading golden log ["+error+"]");
-            }
-        });
-    }*/
-
     powerUp()
     {
         this.totCycles=0;
@@ -241,11 +218,6 @@ class cpu6510
         console.log("Starting with execution at address 0x"+startAddress.toString(16));
 
         this.CPUstarted=true;
-    }
-
-    NMI()
-    {
-        this.nmiPending=true;
     }
 
     setMousePos(mx,my)
@@ -456,101 +428,48 @@ class cpu6510
         return p;
     }
 
-    printCurline(txtid)
-    {
-        var s="";
-        s+=this.pc.toString(16).toUpperCase().lpad("0",4);
-        s+="  ";
-
-        var nextOpcode=this.mmu.readAddr(this.pc);
-        var dis=this.instructionTable[nextOpcode];
-
-        s+=nextOpcode.toString(16).toUpperCase().lpad("0",2);
-        if (dis[0]==1) 
-        {
-            s+="        "+dis[2].toUpperCase().lpad("0",2);
-        }
-        else if (dis[0]==2)
-        {
-            var operand=this.mmu.readAddr(this.pc+1);
-            s+=" "+this.mmu.readAddr(this.pc+1).toString(16).toUpperCase().lpad("0",2)+"     "+dis[2].replace("%d","$"+operand.toString(16).toUpperCase().lpad("0",2));
-        }
-        else if (dis[0]==3)
-        {
-            var operand=this.mmu.readAddr16bit(this.pc+1);
-            s+=" "+this.mmu.readAddr(this.pc+1).toString(16).toUpperCase().lpad("0",2)+" "+this.mmu.readAddr(this.pc+2).toString(16).toUpperCase().lpad("0",2)+"  "+dis[2].replace("%d","$"+operand.toString(16).lpad("0",4)).toUpperCase().lpad("0",2);
-        }
-
-        // registers
-
-        s=s.padEnd(48," ");
-        s+="A:"+this.a.toString(16).toUpperCase().lpad("0",2);
-        s+=" X:"+this.x.toString(16).toUpperCase().lpad("0",2);
-        s+=" Y:"+this.y.toString(16).toUpperCase().lpad("0",2);
-        s+=" P:"+this.flagsToPRegister().toString(16).toUpperCase().lpad("0",2);
-        s+=" SP:"+this.sp.toString(16).toUpperCase().lpad("0",2);
-
-        //
-        //CA42  50 03     BVC $03                         A:80 X:00 Y:00 P:67 SP:FB
-        //CA42  50 03     BVC $CA47                       A:80 X:00 Y:40 P:67 SP:FB PPU:  1,  7 CYC:803        
-        //C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD PPU:  0,  0 CYC:7
-        //C000  4C F5 C5  JMP $C5F5                       A:00 X:00 Y:00 P:24 SP:FD CYC:  0 SL:241
-        //
-
-        // compare goldenlog and our trace
-        var strOur=s.substr(0,16);
-        var strGolden=this.goldenLog[this.goldenLogIdx].substr(0,16);
-
-        if (strOur!=strGolden)
-        {
-            alert("Warning: Golden Log and our code are different (instruction part)!");
-        }
-
-        var strOur2=s.substr(48,73);
-        var strGolden2=this.goldenLog[this.goldenLogIdx].substr(48,25);
-
-        if (strOur2!=strGolden2)
-        {
-            alert("Warning: Golden Log and our code are different (register part)!");
-        }
-
-        document.getElementById(txtid).value=s+"\n"+this.goldenLog[this.goldenLogIdx];
-
-        this.goldenLogIdx+=1;
-    }
-
     executeOneOpcode()
     {
-        // handle NMI?
-        if ((this.nmiPending)&&(this.flagsI))
+        var elapsedCycles=0;
+
+        if (this.nmiPending||this.vicIrqPending||this.ciaIrqPending)
         {
-            this.nmiPending = false;
-            var jumpto = 0xfffa;
+            if (this.flagsI==0)
+            {
+                var jumpto = 0xfffe;
+                if (this.ciaIrqPending) this.ciaIrqPending=false;
+                if (this.vicIrqPending) this.vicIrqPending=false;
+                if (this.nmiPending) 
+                {
+                    jumpto=0xfffa;
+                    this.nmiPending=false;
+                }
 
-            this.mmu.writeAddr(0x100 | this.sp,((this.pc >> 8) & 0xff));
-            this.sp--;
-            if (this.sp<0) this.sp=0xff;
-            this.mmu.writeAddr(0x100 | this.sp,((this.pc & 0xff)));
-            this.sp--;
-            if (this.sp<0) this.sp=0xff;
+                this.mmu.writeAddr(0x100 | this.sp,((this.pc >> 8) & 0xff));
+                this.sp--;
+                if (this.sp<0) this.sp=0xff;
+                this.mmu.writeAddr(0x100 | this.sp,((this.pc & 0xff)));
+                this.sp--;
+                if (this.sp<0) this.sp=0xff;
 
-            var tmp = 0x20;
-            if (this.flagsN) tmp |= 0x80;
-            if (this.flagsV) tmp |= 0x40;
-            if (this.flagsD) tmp |= 0x08;
-            if (this.flagsI) tmp |= 0x04;
-            if (this.flagsZ) tmp |= 0x02;
-            if (this.flagsC) tmp |= 0x01;
+                var tmp = 0x20;
+                if (this.flagsN) tmp |= 0x80;
+                if (this.flagsV) tmp |= 0x40;
+                if (this.flagsD) tmp |= 0x08;
+                if (this.flagsI) tmp |= 0x04;
+                if (this.flagsZ) tmp |= 0x02;
+                if (this.flagsC) tmp |= 0x01;
 
-            this.mmu.writeAddr(0x100 | this.sp, tmp);
-            this.sp--;
-            if (this.sp<0) this.sp=0xff;
+                this.mmu.writeAddr(0x100 | this.sp, tmp);
+                this.sp--;
+                if (this.sp<0) this.sp=0xff;
 
-            this.flagsI=1; //?
+                //this.flagsI=1; 
 
-            this.pc = this.mmu.readAddr16bit(jumpto);
-            this.totCycles+=7;
-            return;
+                this.pc = this.mmu.readAddr16bit(jumpto);
+                this.totCycles+=7;
+                elapsedCycles+=7;
+            }
         }
 
         var jumped=false;
@@ -2386,10 +2305,10 @@ class cpu6510
             }
         }
 
-        //if ((this.pc>=0xe0f0)&&(this.pc<=0xe108)) globalEmuStatus=0;
-
         if (!jumped) this.pc+=this.instructionTable[nextOpcode][0];
+
         this.totCycles+=this.instructionTable[nextOpcode][1];
+        elapsedCycles+=this.instructionTable[nextOpcode][1];
 
         if ((this.a>0xff)||(this.a<0)) alert("Warning: a out of bounds ["+this.a.toString(16)+"] at "+this.pc.toString(16));
         if ((this.x>0xff)||(this.x<0)) alert("Warning: x out of bounds at "+this.pc.toString(16));
@@ -2397,41 +2316,40 @@ class cpu6510
         if ((this.sp>0xff)||(this.sp<0)) alert("Warning: sp out of bounds at "+this.pc.toString(16));
         if ((this.pc>0xffff)||(this.pc<0)) alert("Warning: pc out of bounds at "+this.pc.toString(16));
 
-        //return this.instructionTable[nextOpcode][0];
-        //var k=this.mmu.readAddr(0x4e);
-        //if (k!=0) this.mmu.writeAddr(0x4e,0xff);
-        //k=this.mmu.readAddr(0x4c);
-        //if (k!=0) this.mmu.writeAddr(0x4c,0xff);
+        return elapsedCycles;
     }
 
     debugOpcodes(numOpcodes,disassembledList)
     {
         if (!this.CPUstarted) return;
-        
+
         var baseAddr=this.pc;
 
         for (var nOps=0;nOps<numOpcodes;nOps++)
         {
-            var nextOpcode=this.mmu.readAddr(baseAddr);
-            //console.log("Fetched opcode "+nextOpcode.toString(16));
+            if ((baseAddr>=0)&&(baseAddr<=0xffff))
+            {
+                var nextOpcode=this.mmu.readAddr(baseAddr);
+                //console.log("Fetched opcode "+nextOpcode.toString(16));
 
-            var dis=this.instructionTable[nextOpcode];
-            if (dis[0]==1) 
-            {
-                disassembledList.push([baseAddr,dis[2],[nextOpcode]]);
-            }
-            else if (dis[0]==2)
-            {
-                var operand=this.mmu.readAddr(baseAddr+1);
-                disassembledList.push([baseAddr,dis[2].replace("%d",operand.toString(16)),[nextOpcode,operand]]);
-            }
-            else if (dis[0]==3)
-            {
-                var operand=this.mmu.readAddr16bit(baseAddr+1);
-                disassembledList.push([baseAddr,dis[2].replace("%d",operand.toString(16)),[nextOpcode,operand]]);
-            }
+                var dis=this.instructionTable[nextOpcode];
+                if (dis[0]==1) 
+                {
+                    disassembledList.push([baseAddr,dis[2],[nextOpcode]]);
+                }
+                else if (dis[0]==2)
+                {
+                    var operand=this.mmu.readAddr(baseAddr+1);
+                    disassembledList.push([baseAddr,dis[2].replace("%d",operand.toString(16)),[nextOpcode,operand]]);
+                }
+                else if (dis[0]==3)
+                {
+                    var operand=this.mmu.readAddr16bit(baseAddr+1);
+                    disassembledList.push([baseAddr,dis[2].replace("%d",operand.toString(16)),[nextOpcode,operand]]);
+                }
 
-            baseAddr+=this.instructionTable[nextOpcode][0];
+                baseAddr+=this.instructionTable[nextOpcode][0];
+            }
         }
     }
 }
