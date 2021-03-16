@@ -16,6 +16,8 @@ class cia
         this.timerACtrl_dc0e=0;
         this.timerAisRunning=false;
 
+        this.cia2datadirregA_dd02=0;
+
         this.keyboardKeyList=[];
 
         /*
@@ -33,32 +35,40 @@ class cia
 
         this.keyDefArray =
         [
-            "xx", "q", "pageup", " ", "2", "ctrl", "delete", "1",
-            "Slash","^", "=","rs","home",";","*","INS",
+            "Escape", "q", "PageUp", " ", "2", "Ctrl", "delete", "1",
+            "/","^", "=","rs","Home",";","*","INS",
             ",","@",":",".","-","l","p","+",
             "n","o","k","m","0","j","i","9",
             "v","u","h","b","8","g","y","7",
             "x","t","f","c","6","d","r","5",
-            "lshift","e","s","z","4","a","w","3",
-            "k2","f5","f3","f1","f7","eee","Enter","del"
+            "Shift","e","s","z","4","a","w","3",
+            "k2","F5","F3","F1","F7","eee","Enter","del"
         ];        
+    }
+
+    linkCpu(c)
+    {
+        this.cCpu=c;
     }
 
     setIrqControlReg(value)
     {
-        console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to Irq Control Reg");
+        //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to Irq Control Reg");
         this.irqControlReg_dc0d=value;
     }
 
     setDataPortA(value)
     {
-        console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to Data Port A");
+        //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to Data Port A");
         this.dataPortA=value;
     }
 
     keyPress(kv)
     {
-        this.keyboardKeyList.push(kv);
+        if (this.keyboardKeyList.indexOf(kv)<0)
+        {
+            this.keyboardKeyList.push(kv);
+        }
     }
 
     keyUp(kv)
@@ -97,6 +107,11 @@ class cia
         return retByte;
     }
 
+    cia2getVICbank()
+    {
+        return 3-((~(this.dataPortA | ~this.cia2datadirregA_dd02) & 0x03)&0xffff);
+    }
+
     update(elapsedCycles,theCpu)
     {
         if (this.timerAisRunning)
@@ -116,7 +131,7 @@ class cia
                     this.icr1 |= 0x80;
                 }
 
-                // va ritriggerato?
+                // must be retriggered?
                 if ((this.timerACtrl_dc0e & 0x08) == 0)
                 {
                     this.timerA_dc04 = (this.timerAlatch & 0xff);
@@ -141,10 +156,46 @@ class cia
         {
             return this.dataPortA;
         }
+        else if (addr==0xdd02)
+        {
+            return this.cia2datadirregA_dd02;
+        }
         else if (addr==0xdc01)
         {
             // cia#1 keybmatrix/joy port A
             return this.buildKeypressByte();
+        }
+        else if (addr==0xdc04)
+        {
+            return this.timerA_dc04;
+        }
+        else if (addr==0xdc05)
+        {
+            return this.timerA_dc05;
+        }
+        else if (addr==0xdc08)
+        {
+            // $DC08 - Time Of Day, Tenths Of Seconds
+            var d = new Date();
+            var tos=Math.floor(d.getMilliseconds() / 100);
+            console.log("CIA "+this.ciaId.toString()+"::TOD returning tenths of seconds ["+tos+"]");
+            return tos;    
+        }
+        else if (addr==0xdc09)
+        {
+            // $DC09 - Time Of Day, Seconds
+            var d=new Date();
+            var s=d.getSeconds();
+            var sbcd=parseInt(s.toString(10),16);
+            console.log("CIA "+this.ciaId.toString()+"::TOD returning seconds ["+sbcd.toString(16)+"]");
+            return sbcd;    
+        }
+        else if (addr==0xdc0d)
+        {
+            var ret = this.icr1;
+            this.icr1 = 0;
+            this.cCpu.ciaIrqPending=false;
+            return ret;        
         }
         else if (addr==0xdc0e)
         {
@@ -166,13 +217,13 @@ class cia
         {
             this.timerA_dc04=value;
             this.timerAlatch|=value&0xff;
-            console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch low byte dc04 - latch value is "+this.timerAlatch.toString(16));
+            //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch low byte dc04 - latch value is "+this.timerAlatch.toString(16));
         }
         else if (addr==0xdc05)
         {
             this.timerA_dc05=value;
             this.timerAlatch|=(value<<8)&0xff00;
-            console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch high byte dc05 - latch value is "+this.timerAlatch.toString(16));
+            //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch high byte dc05 - latch value is "+this.timerAlatch.toString(16));
         }
         else if (addr==0xdc0d)
         {
@@ -191,6 +242,10 @@ class cia
                 this.timerAisRunning = false;
             }            
         }
+        else if (addr==0xdd02)
+        {
+            this.cia2datadirregA_dd02=value;
+        }
         else if (addr==0xdd0d)
         {
             this.setIrqControlReg(value);
@@ -200,5 +255,4 @@ class cia
             console.log("CIA "+this.ciaId.toString()+"::Unmapped write to register ["+addr.toString(16)+"]");
         }
     }
-
 }

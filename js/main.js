@@ -6,6 +6,8 @@ var globalFrameNum=0;
 var globalOldCyc=0;
 var globalSchedulePeriod=80;
 
+var glbMMU;
+
 var filterStrength = 20;
 var frameTime = 0, lastLoop = new Date, thisLoop;
 var fpsArray=new Array();
@@ -19,8 +21,10 @@ function startupFunction()
 	var ciaChip1=new cia(1);
 	var ciaChip2=new cia(2);
 	var vicChip=new vic();
-	var mmu=new c64mmu(vicChip,ciaChip1,ciaChip2);
-	var cpu=new cpu6510(mmu);
+	glbMMU=new c64mmu(vicChip,ciaChip1,ciaChip2);
+	var cpu=new cpu6510(glbMMU);
+	ciaChip1.linkCpu(cpu);
+	ciaChip2.linkCpu(cpu);
 
 	document.getElementById("mainCanvass").addEventListener("mousemove",function(e)
 	{
@@ -110,7 +114,7 @@ function startupFunction()
 
 	function updateScreen()
 	{
-		if (mmu.romsLoaded && cpu.CPUstarted)
+		if (glbMMU.romsLoaded && cpu.CPUstarted)
 		{
 			if (globalEmuStatus==0)
 			{
@@ -118,7 +122,7 @@ function startupFunction()
 				cpu.debugOpcodes(24,globalListOfOpcodes);
 				
 				cpu.drawDebugInfo(globalListOfOpcodes,10,30,0);
-				vicChip.simpleRenderer("mainCanvass",520,170,mmu)
+				vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2)
 			}
 			else if (globalEmuStatus==1)
 			{
@@ -134,7 +138,7 @@ function startupFunction()
 				//cpu.drawDebugInfo(globalListOfOpcodes,10,30,0);
 
 				//vicChip.simpleRenderer("mainCanvass",520,170,mmu);
-				vicChip.simpleRenderer("mainCanvass",0,0,mmu);
+				vicChip.simpleRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
 
 				globalOldCyc=cpu.totCycles;
 				globalFrameNum+=1;
@@ -154,6 +158,35 @@ function startupFunction()
 	}
 
 	updateScreen();
+}
+
+function handleFileUpload(fls)
+{
+	var arrayBuffer;
+	var fileReader = new FileReader();
+	fileReader.onload = function(event) 
+	{
+		arrayBuffer = event.target.result;
+		var uint8ArrayNew  = new Uint8Array(arrayBuffer);
+
+		var loadAddr=((uint8ArrayNew[1]) << 8) | uint8ArrayNew[0];
+
+		var offset=0;
+		for (var i = 2; i < uint8ArrayNew.length; i++) 
+		{
+			glbMMU.writeAddr(loadAddr - 2 + i,uint8ArrayNew[i]);
+			offset+=1;
+		}
+
+		// if loaded a BASIC program,update pointers
+		if (loadAddr == 0x0801)
+		{
+			var varstart = loadAddr + offset + 2;
+			glbMMU.writeAddr(0x002D,(varstart & 0xff));
+			glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
+		}		
+	};
+	fileReader.readAsArrayBuffer(fls[0]);	
 }
 
 window.onload=function()

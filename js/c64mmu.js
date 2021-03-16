@@ -156,16 +156,49 @@ class c64mmu
                 return this.basicROM[addr - 0xa000];
             }
         }        
-        else if ((addr>=0xdc00)&&(addr<=0xdcff))
+        else if ((addr >= 0xd000) && (addr <= 0xdfff))
         {
-            // CIA1
-            return this.ciaChip1.readCIARegister(addr);
-        }
-        else if ((addr>=0xdd00)&&(addr<=0xddff))
-        {
-            // CIA2
-            return this.ciaChip2.readCIARegister(addr);
-        }
+            if (!this.io_in)
+            {
+                if (!this.char_in)
+                {
+                    return this.ram64k[addr];
+                }
+                else
+                {
+                    // character rom
+                    return this.chargenROM[addr - 0xd000];
+                }
+            }
+            else
+            {
+                // I/O area
+                if ((addr>=0xdc00)&&(addr<=0xdcff))
+                {
+                    // CIA1
+                    return this.ciaChip1.readCIARegister(addr);
+                }
+                else if ((addr>=0xdd00)&&(addr<=0xddff))
+                {
+                    // CIA2
+                    return this.ciaChip2.readCIARegister(addr);
+                }
+                else if ((addr >= 0xd400) && (addr <= 0xd7ff))
+                {
+                    //return theSid.readRegister(address);
+                    return 0;
+                }
+                else if ((addr>=0xd800)&&(addr<=0xdbff))
+                {
+                    // color RAM
+                    return this.ram64k[addr];
+                }                
+                else
+                {
+                    return this.vicChip.readVICRegister(addr);
+                }
+            }
+        }        
         else if ((addr>=0xe000)&&(addr<=0xffff))
         {
             if (!this.kernal_in)
@@ -199,14 +232,14 @@ class c64mmu
         {
             // Processor port data direction register
             this.dataDirReg=value;
-            console.log("Wrote ["+value.toString(16)+"] to dataDirReg 0000");
+            //console.log("Wrote ["+value.toString(16)+"] to dataDirReg 0000");
             this.setProcessorPortConfig();
         }
         else if (addr==0x0001)
         {
             // processor port
             this.processorPortReg=value;
-            console.log("Wrote ["+value.toString(16)+"] to processor port 0001");
+            //console.log("Wrote ["+value.toString(16)+"] to processor port 0001");
             this.setProcessorPortConfig();
         }
         else if ((addr>=0x0002)&&(addr<=0xff))
@@ -239,7 +272,12 @@ class c64mmu
             }
             else
             {
-                if ((addr >= 0xdc00) && (addr <= 0xdcff))
+                if ((addr>=0xd800)&&(addr<=0xdbff))
+                {
+                    // color RAM
+                    this.ram64k[addr]=value;
+                }
+                else if ((addr >= 0xdc00) && (addr <= 0xdcff))
                 {
                     this.ciaChip1.writeCIARegister(addr, value);
                 }

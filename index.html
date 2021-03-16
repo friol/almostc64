@@ -5,7 +5,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>AlmostC64 v0.1</title>
+    <title>AlmostC64 v0.2</title>
 
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/utils.js"></script>
@@ -19,12 +19,13 @@
 </head>
 <body>
 
-AlmostC64 v0.1 - <span id="fpsSpan">-</span><br/>
+AlmostC64 v0.2 - <span id="fpsSpan">-</span><br/>
 
 <canvas id="mainCanvass" width="900" height="520" style="float:left"></canvas>
 
 <br/>
-<textarea id="nestestLog" name="nestestLog" cols="120" rows="5" style="display:none;"></textarea>
+<!--<textarea id="nestestLog" name="nestestLog" cols="120" rows="5" style="display:none;"></textarea>-->
+<input type="file" id="input" onchange="handleFileUpload(this.files)" style="float:left;clear:both;">
 
 <br/>
 <span style="float:left;clear:both;">ArrowRight step, ArrowUp run</span>

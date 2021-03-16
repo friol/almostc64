@@ -6,7 +6,7 @@ class vic
     {
         this.controlreg=0;
         this.controlreg2=0;
-        this.memoryControlReg=0;
+        this.memoryControlReg_d018=0;
 
         this.backgroundColor=6;
         this.foregroundColor=14;
@@ -51,20 +51,20 @@ class vic
 
     setBackgroundColor(value)
     {
-        console.log("VIC::write ["+value.toString(16)+"] to background color");
+        //console.log("VIC::write ["+value.toString(16)+"] to background color");
         this.backgroundColor=value;
     }
 
-    setForegroundColor(value)
+    setBorderColor(value)
     {
-        console.log("VIC::write ["+value.toString(16)+"] to foreground color");
+        //console.log("VIC::write ["+value.toString(16)+"] to border color");
         this.foregroundColor=value;
     }
 
     setMemoryControlReg(value)
     {
         console.log("VIC::write ["+value.toString(16)+"] to memory control reg D018");
-        this.memoryControlReg=value;
+        this.memoryControlReg_d018=value;
     }
 
     writeVICRegister(addr,value)
@@ -79,7 +79,7 @@ class vic
         }
         else if (addr==0xd020)
         {
-            this.setForegroundColor(value);
+            this.setBorderColor(value);
         }
         else if (addr==0xd021)
         {
@@ -87,11 +87,21 @@ class vic
         }
     }
 
-    drawChar(chpx,chpy,currentChar,ctx,charrom)
+    readVICRegister(addr)
     {
-        var rfg=this.c64palette[(this.foregroundColor*3)+0];
-        var gfg=this.c64palette[(this.foregroundColor*3)+1];
-        var bfg=this.c64palette[(this.foregroundColor*3)+2];
+        if (addr==0xd018)
+        {
+            return this.memoryControlReg_d018|0x01;
+        }
+
+        return 0;
+    }
+
+    drawChar(chpx,chpy,currentChar,currentCharCol,ctx,charrom,cia2,mmu,mempos)
+    {
+        var rfg=this.c64palette[(currentCharCol*3)+0];
+        var gfg=this.c64palette[(currentCharCol*3)+1];
+        var bfg=this.c64palette[(currentCharCol*3)+2];
         var fgColor="rgb("+rfg+","+gfg+","+bfg+")";        
         var rbg=this.c64palette[(this.backgroundColor*3)+0];
         var gbg=this.c64palette[(this.backgroundColor*3)+1];
@@ -100,14 +110,26 @@ class vic
 
         for (var y=0;y<8;y++)
         {
-            var curbyte=charrom[(currentChar*8)+y];
+            var curbyte;
+
+            if ((mempos == 0x1000) || (mempos == 0x9000))
+            {
+                curbyte = charrom[(currentChar * 8) + y];
+            }
+            else if ((mempos == 0x1800) || (mempos == 0x9800))
+            {
+                curbyte = charrom[0x800+(currentChar * 8) + y];
+            }
+            else
+            {
+                curbyte = mmu.readAddr(mempos + ((currentChar * 8) + y));
+            }
+
             for (var x=0;x<8;x++)
             {
                 var curbit=(curbyte>>(7-x))&0x01;
                 if (curbit)
                 {
-                    //ctx.fillStyle = fgColor;
-                    //ctx.fillRect(chpx+x,chpy+y,1,1);
                     this.frameBuffer[0+((chpx+x)*4)+((chpy+y)*this.xResolutionTotal)*4]=rfg;
                     this.frameBuffer[1+((chpx+x)*4)+((chpy+y)*this.xResolutionTotal)*4]=gfg;
                     this.frameBuffer[2+((chpx+x)*4)+((chpy+y)*this.xResolutionTotal)*4]=bfg;
@@ -115,8 +137,6 @@ class vic
                 }
                 else
                 {
-                    //ctx.fillStyle = bgColor;
-                    //ctx.fillRect(chpx+x,chpy+y,1,1);
                     this.frameBuffer[0+((chpx+x)*4)+((chpy+y)*this.xResolutionTotal)*4]=rbg;
                     this.frameBuffer[1+((chpx+x)*4)+((chpy+y)*this.xResolutionTotal)*4]=gbg;
                     this.frameBuffer[2+((chpx+x)*4)+((chpy+y)*this.xResolutionTotal)*4]=bbg;
@@ -126,7 +146,7 @@ class vic
         }
     }
 
-    simpleRenderer(canvasName,px,py,mmu)
+    simpleRenderer(canvasName,px,py,mmu,cia2)
     {
         var canvas = document.getElementById(canvasName);
         var ctx = canvas.getContext("2d");
@@ -152,6 +172,7 @@ class vic
 
         // draw inner area
         var videoRamAddr=0x400;
+        var colorRamAddr=0xd800;
         var chpx=px+this.xLeftBorderWidth;
         var chpy=py+this.yUpperBorderWidth;
 
@@ -159,11 +180,20 @@ class vic
         {
             for (var x=0;x<this.charmodeNumxchars;x++)
             {
-                var currentChar=mmu.readAddr(videoRamAddr);
-                this.drawChar(chpx,chpy,currentChar,ctx,mmu.chargenROM);
+                var vicbank = cia2.cia2getVICbank();
+                vicbank = (3 - vicbank) * 0x4000;
+                var videopage = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
+
+                var mempos = ((this.memoryControlReg_d018 >> 1) & 7) * 0x800;
+                mempos |= vicbank;
+                
+                var currentChar=mmu.readAddr(videopage+(x+(y*this.charmodeNumxchars)));
+                var currentCharCol=mmu.readAddr(colorRamAddr)&0x0f;
+                this.drawChar(chpx,chpy,currentChar,currentCharCol,ctx,mmu.chargenROM,cia2,mmu,mempos);
 
                 chpx+=8;
                 videoRamAddr++;
+                colorRamAddr++;
             }
 
             chpy+=8;
