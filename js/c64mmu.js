@@ -156,6 +156,11 @@ class c64mmu
                 return this.basicROM[addr - 0xa000];
             }
         }        
+        else if ((addr >= 0xc000) && (addr <= 0xcfff))
+        {
+            // upper ram
+            return this.ram64k[addr];
+        }
         else if ((addr >= 0xd000) && (addr <= 0xdfff))
         {
             if (!this.io_in)

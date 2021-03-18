@@ -16,7 +16,9 @@ class cia
         this.timerACtrl_dc0e=0;
         this.timerAisRunning=false;
 
-        this.cia2datadirregA_dd02=0;
+        this.datadirregA=0;
+        this.datadirregB=0;
+        this.controlReg2=0;
 
         this.keyboardKeyList=[];
 
@@ -35,14 +37,14 @@ class cia
 
         this.keyDefArray =
         [
-            "Escape", "q", "PageUp", " ", "2", "Ctrl", "delete", "1",
+            "Escape", "q", "PageUp", " ", "2", "Ctrl", "arrow", "1",
             "/","^", "=","rs","Home",";","*","INS",
             ",","@",":",".","-","l","p","+",
             "n","o","k","m","0","j","i","9",
             "v","u","h","b","8","g","y","7",
             "x","t","f","c","6","d","r","5",
             "Shift","e","s","z","4","a","w","3",
-            "k2","F5","F3","F1","F7","eee","Enter","del"
+            "k2","F5","F3","F1","F7","eee","Enter","Backspace"
         ];        
     }
 
@@ -88,6 +90,7 @@ class cia
         {
             var k = this.keyboardKeyList[curk];
             var pos=0;
+
             for (var i=0;i<this.keyDefArray.length;i++)
             {
                 if (k == this.keyDefArray[i])
@@ -109,7 +112,7 @@ class cia
 
     cia2getVICbank()
     {
-        return 3-((~(this.dataPortA | ~this.cia2datadirregA_dd02) & 0x03)&0xffff);
+        return 3-((~(this.dataPortA | ~this.datadirregA) & 0x03)&0xffff);
     }
 
     update(elapsedCycles,theCpu)
@@ -152,18 +155,27 @@ class cia
 
     readCIARegister(addr)
     {
-        if (addr==0xdd00)
+        if (addr==0xdc00)
+        {
+            //return buildCia1PortAByte();
+            return 0xff;
+        }
+        else if (addr==0xdd00)
         {
             return this.dataPortA;
         }
-        else if (addr==0xdd02)
+        else if ((addr==0xdc02)||(addr==0xdd02))
         {
-            return this.cia2datadirregA_dd02;
+            return this.datadirregA;
         }
         else if (addr==0xdc01)
         {
             // cia#1 keybmatrix/joy port A
             return this.buildKeypressByte();
+        }
+        else if ((addr==0xdc03)||(addr==0xdd03))
+        {
+            return this.datadirregB;
         }
         else if (addr==0xdc04)
         {
@@ -197,9 +209,13 @@ class cia
             this.cCpu.ciaIrqPending=false;
             return ret;        
         }
-        else if (addr==0xdc0e)
+        else if ((addr==0xdc0e)||(addr==0xdd0e))
         {
             return this.timerACtrl_dc0e;
+        }
+        else if ((addr==0xdc0f)||(addr==0xdd0f))
+        {
+            return this.controlReg2;
         }
         else
         {
@@ -212,6 +228,10 @@ class cia
         if ((addr==0xdc00)||(addr==0xdd00))
         {
             this.setDataPortA(value);
+        }
+        else if ((addr==0xdc03)||(addr==0xdd03))
+        {
+            this.datadirregB=value;
         }
         else if (addr==0xdc04)
         {
@@ -229,7 +249,7 @@ class cia
         {
             this.setIrqControlReg(value);
         }
-        else if (addr==0xdc0e)
+        else if ((addr==0xdc0e)||(addr==0xdd0e))
         {
             this.timerACtrl_dc0e=value;            
             
@@ -242,9 +262,13 @@ class cia
                 this.timerAisRunning = false;
             }            
         }
-        else if (addr==0xdd02)
+        else if ((addr==0xdc0f)||(addr==0xdd0f))
         {
-            this.cia2datadirregA_dd02=value;
+            this.controlReg2=value;
+        }
+        else if ((addr==0xdc02)||(addr==0xdd02))
+        {
+            this.datadirregA=value;
         }
         else if (addr==0xdd0d)
         {

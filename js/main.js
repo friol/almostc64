@@ -98,15 +98,21 @@ function startupFunction()
 		}
 		else
 		{
-			ciaChip1.keyPress(e.key);
+			if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="\"")) ciaChip1.keyPress("2");
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="$")) ciaChip1.keyPress("4");
+			else ciaChip1.keyPress(e.key);
 		}
+
+		if (e.key=="Backspace") e.preventDefault();
 	};
 
 	document.onkeyup = function(e)
 	{
 		//if ((e.key=="ArrowDown")||(e.key=="ArrowUp")||(e.key=="ArrowLeft")||(e.key=="ArrowRight")||(e.key=="p")||(e.key=="o")||(e.key=="k")||(e.key=="l"))
 		{
-			ciaChip1.keyUp(e.key);
+			if (e.key=="\"") ciaChip1.keyUp("2");
+			else if (e.key=="$") ciaChip1.keyUp("4");
+			else ciaChip1.keyUp(e.key);
 		}
 	}
 	

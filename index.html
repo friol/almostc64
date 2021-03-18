@@ -10,6 +10,7 @@
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/cia.js"></script>
+    <script src="js/sprite.js"></script>
     <script src="js/vic.js"></script>
     <script src="js/c64mmu.js"></script>
     <script src="js/cpu6510.js"></script>
@@ -19,16 +20,14 @@
 </head>
 <body>
 
-AlmostC64 v0.2 - <span id="fpsSpan">-</span><br/>
+AlmostC64 v0.2 - <span id="fpsSpan">-</span> <span id="keydebug">-</span><br/>
 
 <canvas id="mainCanvass" width="900" height="520" style="float:left"></canvas>
 
 <br/>
-<!--<textarea id="nestestLog" name="nestestLog" cols="120" rows="5" style="display:none;"></textarea>-->
-<input type="file" id="input" onchange="handleFileUpload(this.files)" style="float:left;clear:both;">
 
 <br/>
-<span style="float:left;clear:both;">ArrowRight step, ArrowUp run</span>
+<input type="file" id="input" onchange="handleFileUpload(this.files)" style="float:left;clear:both;">
 
 </body>
 </html>
