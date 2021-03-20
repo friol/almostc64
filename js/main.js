@@ -98,6 +98,10 @@ function startupFunction()
 			document.getElementById("mainCanvass").width=900;
 			document.getElementById("mainCanvass").height=600;
 		}
+		else if (e.key=="PageDown")
+		{
+			vicChip.debaggaAdder+=0x100;	
+		}
 		else
 		{
 			if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="\"")) ciaChip1.keyPress("2");

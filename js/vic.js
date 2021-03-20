@@ -4,6 +4,8 @@ class vic
 {
     constructor()
     {
+        this.debaggaAdder=0;
+
         this.rasterTicker=0;
         this.currentRasterLine=0;
 
@@ -375,7 +377,7 @@ class vic
     // extended color mode (monochrome chars on 4 bg colors)
     // multicolor mode (4 color chars on bg)
 
-    drawChar(chpx,chpy,currentChar,currentCharCol,ctx,charrom,cia2,mmu,mempos,row,col)
+    drawChar(chpx,chpy,currentChar,currentCharCol,ctx,charrom,cia2,mmu,mempos,row,column)
     {
         var rfg=this.c64palette[(currentCharCol*3)+0];
         var gfg=this.c64palette[(currentCharCol*3)+1];
@@ -421,6 +423,7 @@ class vic
             var vicbase = memsetup2 | realvicbank;
 
             mempos = (((this.memoryControlReg_d018 >> 1) & 0x07) * 0x800) | realvicbank;
+            currentChar = mmu.readAddr((row * 40) + column + vicbase);
         }
 
         for (var y=0;y<8;y++)
@@ -498,12 +501,17 @@ class vic
 
     drawBitmapScreen(ctx,mmu,cia2)
     {
-        var basecoladdr = 0x0400;
-
-        var vicbank = cia2.cia2getVICbank();
+        /*var vicbank = cia2.cia2getVICbank();
         vicbank = (3 - vicbank) * 0x4000;
         var baseaddr = ((this.memoryControlReg_d018 >> 3) & 0x01) * 0x2000;
-        baseaddr |= vicbank;
+        baseaddr |= vicbank;*/
+
+        var vicBaseAddr = (~cia2.dataPortA & 0x03) << 14;
+        var vicscreenMemoryAddr = (this.memoryControlReg_d018 & 0xf0) << 6;
+        var basecoladdr=vicBaseAddr+vicscreenMemoryAddr;
+
+        var bitmapMemoryAddr = (this.memoryControlReg_d018 & 0x08) << 10;
+        var baseaddr=vicBaseAddr+bitmapMemoryAddr+this.debaggaAdder;
 
         var colorRamPos=0;
         for (var y=this.yUpperBorderWidth;y<(this.yUpperBorderWidth+200);y+=8)
@@ -556,33 +564,34 @@ class vic
                 {
                     // multicolor bitmap graphics
 
+                    var colorArray=new Array(4*3);
+                    colorArray[0]=this.c64palette[(this.backgroundColor[0]*3)+0];
+                    colorArray[1]=this.c64palette[(this.backgroundColor[0]*3)+1];
+                    colorArray[2]=this.c64palette[(this.backgroundColor[0]*3)+2];
+
+                    var bytecol=mmu.readAddr(basecoladdr);
+
+                    colorArray[3]=this.c64palette[(((bytecol>>4)&0x0f)*3)+0];
+                    colorArray[4]=this.c64palette[(((bytecol>>4)&0x0f)*3)+1];
+                    colorArray[5]=this.c64palette[(((bytecol>>4)&0x0f)*3)+2];
+                    
+                    colorArray[6]=this.c64palette[((bytecol&0x0f)*3)+0];
+                    colorArray[7]=this.c64palette[((bytecol&0x0f)*3)+1];
+                    colorArray[8]=this.c64palette[((bytecol&0x0f)*3)+2];
+
+                    const colorRamAddr=0xd800;
+                    var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos)&0x0f;
+                    colorArray[9]= this.c64palette[(colRamVal*3)+0];
+                    colorArray[10]=this.c64palette[(colRamVal*3)+1];
+                    colorArray[11]=this.c64palette[(colRamVal*3)+2];
+
                     for (var bcell=0;bcell<8;bcell++)
                     {
-                        var bytecol=mmu.readAddr(basecoladdr);
                         var bytepix=mmu.readAddr(baseaddr);
-
-                        var colorArray=new Array(4*3);
-                        colorArray[0]=this.c64palette[(this.backgroundColor[0]*3)+0];
-                        colorArray[1]=this.c64palette[(this.backgroundColor[0]*3)+1];
-                        colorArray[2]=this.c64palette[(this.backgroundColor[0]*3)+2];
-
-                        colorArray[3]=this.c64palette[(((bytecol>>4)&0x0f)*3)+0];
-                        colorArray[4]=this.c64palette[(((bytecol>>4)&0x0f)*3)+1];
-                        colorArray[5]=this.c64palette[(((bytecol>>4)&0x0f)*3)+2];
-                        
-                        colorArray[6]=this.c64palette[((bytecol&0x0f)*3)+0];
-                        colorArray[7]=this.c64palette[((bytecol&0x0f)*3)+1];
-                        colorArray[8]=this.c64palette[((bytecol&0x0f)*3)+2];
-
-                        const colorRamAddr=0xd800;
-                        var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos)&0x0f;
-                        colorArray[9]= this.c64palette[(colRamVal*3)+0];
-                        colorArray[10]=this.c64palette[(colRamVal*3)+1];
-                        colorArray[11]=this.c64palette[(colRamVal*3)+2];
 
                         for (var px=0;px<8;px+=2)
                         {
-                            var cur2bits=(bytepix>>(7-px))&0x03;
+                            var cur2bits=(bytepix>>(6-px))&0x03;
 
                             this.frameBuffer[0+((x+px)*4)+((y+bcell)*this.xResolutionTotal)*4]=colorArray[0+(cur2bits*3)];
                             this.frameBuffer[1+((x+px)*4)+((y+bcell)*this.xResolutionTotal)*4]=colorArray[1+(cur2bits*3)];
