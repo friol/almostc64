@@ -4,6 +4,11 @@ class c64mmu
 {
     constructor(vicChip,ciaChip1,ciaChip2)
     {
+        this.basic_in=false;
+        this.kernal_in=true;
+        this.char_in=false;
+        this.io_in=false;
+
         this.chargenROM=new Array();
         this.basicROM=new Array();
         this.kernalROM=new Array();
@@ -18,13 +23,9 @@ class c64mmu
         this.ciaChip1=ciaChip1;
         this.ciaChip2=ciaChip2;
 
-        this.dataDirReg=0;
-        this.processorPortReg=0;
-
-        this.basic_in=false;
-        this.kernal_in=true;
-        this.char_in=false;
-        this.io_in=false;
+        this.dataDirReg=0x2f;
+        this.processorPortReg=0x37;
+        this.setProcessorPortConfig();
 
         // load chargen, basic and kernal roms
         this.romsLoaded=false;
@@ -74,6 +75,11 @@ class c64mmu
                                             {
                                                 thisInstance.kernalROM.push(uint8ArrayNew[c]);
                                             }
+
+                                            // kernal patch to speedup booting process
+                                            thisInstance.kernalROM[0xFD84-0xE000] = 0xea;
+                                            thisInstance.kernalROM[0xFD85-0xE000] = 0x88;
+
                                             thisInstance.romsLoaded=true;
                                         }
                                         fileReader.readAsArrayBuffer(data);                    
@@ -124,7 +130,7 @@ class c64mmu
         }
         else if (addr==0x0001)
         {
-            return ((this.dataDirReg & this.processorPortReg) | (~this.dataDirReg & 0x17))&0xff;
+            return ((this.dataDirReg & this.processorPortReg) | ((~this.dataDirReg) & 0x17))&0xff;
         }
         else if ((addr>=0x0002)&&(addr<=0xff))
         {
@@ -227,8 +233,8 @@ class c64mmu
     readAddr16bit(addr)
     {
         //console.log("Warning: 16bit CPU read");
-        if (addr<=0xff) return (this.readAddr(addr)+(this.readAddr((addr+1)&0xff)<<8));
-        return (this.readAddr(addr)+(this.readAddr(addr+1)<<8));
+        //if (addr<=0xff) return (this.readAddr(addr)+(this.readAddr((addr+1)&0xff)<<8));
+        return (this.readAddr(addr)|(this.readAddr(addr+1)<<8))&0xffff;
     }
 
     writeAddr(addr,value)

@@ -103,6 +103,7 @@ class cpu6510
         this.instructionTable[0x7D]=[3,4,`ADC %d,X`];
         this.instructionTable[0x7E]=[3,7,`ROR %d,X`];
 
+        this.instructionTable[0x80]=[1,2,`SKB`];
         this.instructionTable[0x81]=[2,6,`STA %d`];
         this.instructionTable[0x84]=[2,3,`STY %d`];
         this.instructionTable[0x85]=[2,3,`STA %d`];
@@ -207,7 +208,8 @@ class cpu6510
         this.flagsV=0;
         this.flagsN=0;
 
-        this.sp=0xfd;
+        //this.sp=0xfd;
+        this.sp=0xff;
 
         // PC = byte at $FFFD * 256 + byte at $FFFC 
         var startAddressLow=this.mmu.readAddr(0xfffc);
@@ -362,54 +364,126 @@ class cpu6510
 
     doAdc(iop)
     {
-        var adder = 0;
-        if (this.flagsC != 0)
+        if (this.flagsD==0)
         {
-            adder=1;
-        }
+            var adder = 0;
+            if (this.flagsC != 0)
+            {
+                adder=1;
+            }
 
-        var rez = (this.a+iop+adder);
+            var rez = (this.a+iop+adder);
 
-        this.doFlagsNZ((rez & 0xff));
+            this.doFlagsNZ((rez & 0xff));
 
-        if (rez > 0xff)
-        {
-            this.flagsC=1;
+            if (rez > 0xff)
+            {
+                this.flagsC=1;
+            }
+            else
+            {
+                this.flagsC=0;
+            }
+
+            if ((((this.a ^ iop) & 0x80) ==0) && (((this.a ^ rez) & 0x80) !=0))
+            {
+                this.flagsV=1;
+            }
+            else
+            {
+                this.flagsV=0;
+            }
+
+            this.a = (rez&0xff);        
         }
         else
         {
-            this.flagsC=0;
-        }
+            var al, ah;
+            var abyte = iop&0xff;
+            var seaflag = false;
+            if (this.flagsC != 0) seaflag = true;
 
-        if ((((this.a ^ iop) & 0x80) ==0) && (((this.a ^ rez) & 0x80) !=0))
-        {
-            this.flagsV=1;
-        }
-        else
-        {
-            this.flagsV=0;
-        }
+            al = ((this.a & 0x0f) + (abyte & 0x0f) + (seaflag ? 1 : 0))&0xffff;		// Calculate lower nybble
+            if (al > 9) al += 6;									// BCD fixup for lower nybble
 
-        this.a = (rez&0xff);        
+            ah = ((this.a >> 4) + (abyte >> 4))&0xffff;							// Calculate upper nybble
+            if (al > 0x0f) ah++;
+
+            var z_flag = (this.a + abyte + (seaflag ? 1 : 0))&0xff;					// Set flags
+            var n_flag = (ah << 4)&0xff;	// Only highest bit used
+            var v_flag = (((ah << 4) ^ this.a) & 0x80) != 0 && !(((this.a ^ iop) & 0x80) != 0);
+
+            if (v_flag) this.flagsV=1;
+            else this.flagsV=0;
+
+            if ((n_flag&0x80)==0x80) this.flagsN=1;
+            else this.flagsN=0;
+
+            if (z_flag) this.flagsZ=0;
+            else this.flagsZ=1;
+
+            if (ah > 9) ah += 6;									// BCD fixup for upper nybble
+
+            if (ah > 0x0f) this.flagsC=1;
+            else this.flagsC=0;
+            this.a = ((ah << 4) | (al & 0x0f))&0xff;							// Compose result
+        }
     }
 
     doSbc(value)
     {
-        var temp = this.a - value - (1 - this.flagsC);
+        if (this.flagsD==0)
+        {
+            var temp = this.a - value - (1 - this.flagsC);
 
-        if (
-          ((this.a ^ temp) & 0x80) !== 0 &&
-          ((this.a ^ value) & 0x80) !== 0
-        ) {
-          this.flagsV = 1;
-        } else {
-          this.flagsV = 0;
+            if (
+            ((this.a ^ temp) & 0x80) !== 0 &&
+            ((this.a ^ value) & 0x80) !== 0
+            ) {
+            this.flagsV = 1;
+            } else {
+            this.flagsV = 0;
+            }
+
+            this.flagsC = temp < 0 ? 0 : 1;
+
+            this.a = temp & 0xff;
+            this.doFlagsNZ(this.a);
         }
+        else
+        {
+            var al, ah;
+            var abyte = value&0xff;
+            var seaflag = false;
+            if (this.flagsC != 0) seaflag = true;
 
-        this.flagsC = temp < 0 ? 0 : 1;
+            var tmp = (this.a - abyte - (seaflag? 0 : 1))&0xffff;
 
-        this.a = temp & 0xff;
-        this.doFlagsNZ(this.a);
+            // Decimal mode
+            al = ((this.a & 0x0f) - (abyte & 0x0f) - (seaflag ? 0 : 1))&0xffff;	// Calculate lower nybble
+            ah = ((this.a >> 4) - (abyte >> 4))&0xffff;							// Calculate upper nybble
+            if ((al & 0x10) != 0)
+            {
+                al -= 6;											        // BCD fixup for lower nybble
+                ah--;
+            }
+            if ((ah & 0x10) != 0) ah -= 6;									// BCD fixup for upper nybble
+
+            if (tmp < 0x100) this.flagsC=1;
+            else this.flagsC=0;
+
+            if (((this.a ^ tmp) & 0x80) != 0 && ((this.a ^ abyte) & 0x80) != 0) this.flagsV=1;
+            else this.flagsV=0;
+
+            if ((tmp&0xff) == 0) this.flagsZ=1;
+            else this.flagsZ=0;
+
+            var n_flag = tmp&0xff;
+            if ((n_flag & 0x80) == 0x80) this.flagsN=1;
+            else this.flagsN=0;
+
+            this.a = ((ah << 4) | (al & 0x0f))&0xff;							// Compose result
+        }
     }
 
     flagsToPRegister()
@@ -482,11 +556,10 @@ class cpu6510
             {
                 // BRK
 
-                this.pc+=1;
-                this.mmu.writeAddr(0x100 | this.sp,((this.pc >> 8) & 0xff));
+                this.mmu.writeAddr(0x100 | this.sp,(((this.pc+1) >> 8) & 0xff));
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
-                this.mmu.writeAddr(0x100 | this.sp,((this.pc & 0xff)));
+                this.mmu.writeAddr(0x100 | this.sp,(((this.pc+1) & 0xff)));
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
 
@@ -503,7 +576,7 @@ class cpu6510
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
 
-                this.flagsI=1; //?
+                this.flagsI=1;
 
                 this.pc = this.mmu.readAddr16bit(0xFFFE);
                 break;
@@ -1583,6 +1656,12 @@ class cpu6510
                 this.mmu.writeAddr(operand+this.x,bitz);
 
                 this.doFlagsNZ(bitz);
+                break;
+            }
+            case 0x80:
+            {
+                // SKB
+                this.pc+=1;
                 break;
             }
             case 0x81:

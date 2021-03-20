@@ -4,12 +4,17 @@ class vic
 {
     constructor()
     {
+        this.rasterTicker=0;
+        this.currentRasterLine=0;
+
         this.controlreg2_d016=0;
         this.memoryControlReg_d018=0;
         this.screencontrol1_d011=0x1b;
         this.irqEnable_d01a=0;
         this.irqFlagRegister_d019=0;
         this.rasterRegister_d012=0;
+
+        this.intstatusreg=0x71;
 
         this.backgroundColor=new Array();
 
@@ -75,13 +80,48 @@ class vic
 
         this.lightPenLatchX_d013=0;
         this.lightPenLatchY_d014=0;
-
-
     }
+
+    updateVic(clocksElapsed,theCpu)
+    {
+        this.rasterTicker += clocksElapsed;
+
+        const rasterLines = 263;
+        const framesPerSecond = 60;
+        const c64freq = 1022727;
+
+        var c64frame = c64freq / framesPerSecond;
+        var clocksPerRasterline = 65;// c64frame / rasterLines;
+
+        if (this.rasterTicker >= clocksPerRasterline)
+        {
+            this.rasterTicker -= clocksPerRasterline;
+            this.currentRasterLine++;
+            if (this.currentRasterLine >= rasterLines)
+            {
+                this.currentRasterLine = 0;
+            }
+
+            var cmpval = this.rasterRegister_d012;
+            if ((this.screencontrol1_d011&0x80)!=0) cmpval+=256;
+
+            if (this.currentRasterLine == cmpval)
+            {
+                this.intstatusreg |= 0x01;
+                if ((this.irqEnable_d01a & 0x01) !=0)
+                {
+                    // trigger irq
+                    theCpu.vicIrqPending=true;
+                    this.intstatusreg |= 0x80;
+                    //theLogger.logWrite("VIC irq fires");
+                }
+            }
+        }
+    }    
 
     setControlReg2(value)
     {
-        console.log("VIC::write ["+value.toString(16)+"] to Control Reg2");
+        //console.log("VIC::write ["+value.toString(16)+"] to Control Reg2");
         this.controlreg2_d016=value;
     }
 
@@ -99,12 +139,17 @@ class vic
 
     setMemoryControlReg(value)
     {
-        console.log("VIC::write ["+value.toString(16)+"] to memory control reg D018");
+        //console.log("VIC::write ["+value.toString(16)+"] to memory control reg D018");
         this.memoryControlReg_d018=value;
     }
 
     writeVICRegister(addr,value)
     {
+        if ((addr >= 0xd040) && (addr <= 0xd3ff))
+        {
+            addr = (addr % 0x40) | 0xd000;
+        }
+
         if ((addr>=0xd000)&&(addr<=0xd00f))
         {
             if ((addr%2)==0) this.spritePositionsX[(addr&0x0f)/2]=value;
@@ -239,15 +284,88 @@ class vic
 
     readVICRegister(addr)
     {
-        if (addr==0xd011)
+        if ((addr >= 0xd040) && (addr <= 0xd3ff))
+        {
+            addr = (addr % 0x40) | 0xd000;
+        }
+
+        if ((addr >= 0xD000) && (addr <= 0xD00F))
+        {
+            // sprite 0-7 x and y position, lower bits
+            if ((addr%2)==0) return this.spritePositionsX[(addr&0x0f)/2];
+            else return this.spritePositionsY[((addr&0x0f)-1)/2];
+        }
+        else if (addr==0xd010)
+        {
+            return this.spritePositionXupperbit_d010;
+        }
+        else if (addr==0xd011)
         {
             var ret = (this.screencontrol1_d011 & 0x7f);
-            //if (currentRasterLine >= 256) ret |= 0x80;
+            if (this.currentRasterLine >= 256) ret |= 0x80;
             return ret;
+        }
+        else if (addr == 0xD012)
+        {
+            return (this.currentRasterLine & 0xff);
+        }
+        else if (addr==0xd016)
+        {
+            return (this.controlreg2_d016|0xc0);
         }
         else if (addr==0xd018)
         {
             return this.memoryControlReg_d018|0x01;
+        }
+        else if (addr == 0xD019)
+        {
+            // interrupt status register
+            return (this.intstatusreg| 0x70)&0xff;
+        }
+        else if (addr==0xd01d)
+        {
+            return this.spriteExpandHorizontal_d01d;
+        }
+        else if (addr == 0xd01e)
+        {
+            return 0x00; // FIXX sprite collision register
+        }
+        else if (addr == 0xd01f)
+        {
+            return 0x00; // FIXXX sprite to background collision
+        }        
+        else if (addr==0xd020)
+        {
+            return this.foregroundColor;
+        }
+        else if (addr==0xd021)
+        {
+            return this.backgroundColor[0];
+        }
+        else if (addr==0xd022)
+        {
+            return this.backgroundColor[1];
+        }
+        else if (addr==0xd023)
+        {
+            return this.backgroundColor[2];
+        }
+        else if (addr==0xd024)
+        {
+            return this.backgroundColor[3];
+        }     
+        else if (addr==0xd025)
+        {
+            return this.spriteMulticolor0_d025;
+        }
+        else if (addr==0xd030)
+        {
+            // unused (on c64)
+            return 0xff;
+        }   
+        else
+        {
+            console.log("VIC::read - unhandled reg "+addr.toString(16));
         }
 
         return 0;
@@ -257,7 +375,7 @@ class vic
     // extended color mode (monochrome chars on 4 bg colors)
     // multicolor mode (4 color chars on bg)
 
-    drawChar(chpx,chpy,currentChar,currentCharCol,ctx,charrom,cia2,mmu,mempos)
+    drawChar(chpx,chpy,currentChar,currentCharCol,ctx,charrom,cia2,mmu,mempos,row,col)
     {
         var rfg=this.c64palette[(currentCharCol*3)+0];
         var gfg=this.c64palette[(currentCharCol*3)+1];
@@ -292,6 +410,17 @@ class vic
             rgbArr[(col*3)+0]=this.c64palette[(this.backgroundColor[col]*3)+0];
             rgbArr[(col*3)+1]=this.c64palette[(this.backgroundColor[col]*3)+1];
             rgbArr[(col*3)+2]=this.c64palette[(this.backgroundColor[col]*3)+2];
+        }
+
+        if (multicolorMode==true)
+        {
+            var vicbank = cia2.cia2getVICbank();
+            var realvicbank = (3 - vicbank) * 0x4000;
+
+            var memsetup2 = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
+            var vicbase = memsetup2 | realvicbank;
+
+            mempos = (((this.memoryControlReg_d018 >> 1) & 0x07) * 0x800) | realvicbank;
         }
 
         for (var y=0;y<8;y++)
@@ -523,7 +652,7 @@ class vic
                     
                     var currentChar=mmu.readAddr(videopage+(x+(y*this.charmodeNumxchars)));
                     var currentCharCol=mmu.readAddr(colorRamAddr)&0x0f;
-                    this.drawChar(chpx,chpy,currentChar,currentCharCol,ctx,mmu.chargenROM,cia2,mmu,mempos);
+                    this.drawChar(chpx,chpy,currentChar,currentCharCol,ctx,mmu.chargenROM,cia2,mmu,mempos,y,x);
 
                     chpx+=8;
                     colorRamAddr++;

@@ -43,6 +43,7 @@ function startupFunction()
 			var elcyc=cpu.executeOneOpcode();			
 			ciaChip1.update(elcyc,cpu);
 			ciaChip2.update(elcyc,cpu);
+			vicChip.updateVic(elcyc,cpu);
 			//apu.step(cpu.totCycles);
 		}
 		/*else if (e.key=="d")
@@ -68,6 +69,7 @@ function startupFunction()
 					var elcyc=cpu.executeOneOpcode();			
 					ciaChip1.update(elcyc,cpu);
 					ciaChip2.update(elcyc,cpu);
+					vicChip.updateVic(elcyc,cpu);
 							
 					times+=1;
 					updateTimer+=1;
@@ -104,6 +106,7 @@ function startupFunction()
 		}
 
 		if (e.key=="Backspace") e.preventDefault();
+		if (e.key=="F1") e.preventDefault();
 	};
 
 	document.onkeyup = function(e)
@@ -128,7 +131,7 @@ function startupFunction()
 				cpu.debugOpcodes(24,globalListOfOpcodes);
 				
 				cpu.drawDebugInfo(globalListOfOpcodes,10,30,0);
-				vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2)
+				vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2);
 			}
 			else if (globalEmuStatus==1)
 			{
@@ -137,6 +140,7 @@ function startupFunction()
 					var elcyc=cpu.executeOneOpcode();			
 					ciaChip1.update(elcyc,cpu);
 					ciaChip2.update(elcyc,cpu);
+					vicChip.updateVic(elcyc,cpu);
 				}			
 
 				//globalListOfOpcodes=new Array();
@@ -187,7 +191,7 @@ function handleFileUpload(fls)
 		// if loaded a BASIC program,update pointers
 		if (loadAddr == 0x0801)
 		{
-			var varstart = loadAddr + offset + 2;
+			var varstart = loadAddr + offset;
 			glbMMU.writeAddr(0x002D,(varstart & 0xff));
 			glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
 		}		

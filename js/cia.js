@@ -110,11 +110,6 @@ class cia
         return retByte;
     }
 
-    cia2getVICbank()
-    {
-        return 3-((~(this.dataPortA | ~this.datadirregA) & 0x03)&0xffff);
-    }
-
     update(elapsedCycles,theCpu)
     {
         if (this.timerAisRunning)
@@ -153,8 +148,16 @@ class cia
         }
     }
 
+    cia2getVICbank()
+    {
+        return 3-((~(this.dataPortA | (~this.datadirregA)) & 0x03)&0xffff);
+    }
+
     readCIARegister(addr)
     {
+        if (this.ciaId==1) addr = (addr & 0xff) | 0xdc00;
+        if (this.ciaId==2) addr = (addr & 0xff) | 0xdd00;
+
         if (addr==0xdc00)
         {
             //return buildCia1PortAByte();
@@ -164,24 +167,24 @@ class cia
         {
             return this.dataPortA;
         }
-        else if ((addr==0xdc02)||(addr==0xdd02))
-        {
-            return this.datadirregA;
-        }
         else if (addr==0xdc01)
         {
             // cia#1 keybmatrix/joy port A
             return this.buildKeypressByte();
         }
+        else if ((addr==0xdc02)||(addr==0xdd02))
+        {
+            return this.datadirregA;
+        }
         else if ((addr==0xdc03)||(addr==0xdd03))
         {
             return this.datadirregB;
         }
-        else if (addr==0xdc04)
+        else if ((addr==0xdc04)||(addr==0xdd04))
         {
             return this.timerA_dc04;
         }
-        else if (addr==0xdc05)
+        else if ((addr==0xdc05)||(addr==0xdd05))
         {
             return this.timerA_dc05;
         }
@@ -209,6 +212,14 @@ class cia
             this.cCpu.ciaIrqPending=false;
             return ret;        
         }
+        else if (addr==0xdd0d)
+        {
+            // cia2 interrupt control reg
+            var ret = this.icr1;
+            this.icr1 = 0;
+            this.cCpu.nmiPending=false;
+            return ret;
+        }
         else if ((addr==0xdc0e)||(addr==0xdd0e))
         {
             return this.timerACtrl_dc0e;
@@ -225,29 +236,53 @@ class cia
 
     writeCIARegister(addr,value)
     {
+        if (this.ciaId==1) addr = (addr%0x10) | 0xdc00;
+        if (this.ciaId==2) addr = (addr%0x10) | 0xdd00;
+
         if ((addr==0xdc00)||(addr==0xdd00))
         {
             this.setDataPortA(value);
+            if ((this.ciaId==2)&&(addr==0xdd00)) console.log("CIA2 set dataportA DD00 "+value.toString(16));
+        }
+        else if ((addr==0xdc02)||(addr==0xdd02))
+        {
+            this.datadirregA=value;
+            if ((this.ciaId==2)&&(addr==0xdd02)) console.log("CIA2 set datadirregA DD02 "+value.toString(16));
         }
         else if ((addr==0xdc03)||(addr==0xdd03))
         {
             this.datadirregB=value;
         }
-        else if (addr==0xdc04)
+        else if ((addr==0xdc04)||(addr==0xdd04))
         {
             this.timerA_dc04=value;
             this.timerAlatch|=value&0xff;
             //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch low byte dc04 - latch value is "+this.timerAlatch.toString(16));
         }
-        else if (addr==0xdc05)
+        else if ((addr==0xdc05)||(addr==0xdd05))
         {
             this.timerA_dc05=value;
             this.timerAlatch|=(value<<8)&0xff00;
             //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch high byte dc05 - latch value is "+this.timerAlatch.toString(16));
         }
-        else if (addr==0xdc0d)
+        else if ((addr==0xdc0d)||(addr==0xdd0d))
         {
-            this.setIrqControlReg(value);
+            // cia1/2 Interrupt control and status register
+
+            if ((value & 0x80) != 0)
+            {
+                this.irqControlReg_dc0d |= (value & 0x7f)&0xff;
+            }
+            else
+            {
+                this.irqControlReg_dc0d &= (~value)&0xff;
+            }
+
+            if ((this.icr1 & this.irqControlReg_dc0d & 0x1f) != 0)
+            {
+                this.icr1 |= 0x80;
+                this.cCpu.ciaIrqPending = true;
+            }
         }
         else if ((addr==0xdc0e)||(addr==0xdd0e))
         {
@@ -265,14 +300,6 @@ class cia
         else if ((addr==0xdc0f)||(addr==0xdd0f))
         {
             this.controlReg2=value;
-        }
-        else if ((addr==0xdc02)||(addr==0xdd02))
-        {
-            this.datadirregA=value;
-        }
-        else if (addr==0xdd0d)
-        {
-            this.setIrqControlReg(value);
         }
         else
         {
