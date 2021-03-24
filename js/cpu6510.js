@@ -60,7 +60,10 @@ class cpu6510
         this.instructionTable[0x36]=[2,6,`ROL %d`];
         this.instructionTable[0x38]=[1,2,`SEC`];
         this.instructionTable[0x39]=[3,4,`AND %d,Y`];
+
+        this.instructionTable[0x3C]=[1,2,`NOP`];
         this.instructionTable[0x3D]=[3,4,`AND %d`];
+
         this.instructionTable[0x3E]=[3,7,`ROL %d,X`];
 
         this.instructionTable[0x40]=[1,6,`RTI`];
@@ -157,6 +160,7 @@ class cpu6510
         this.instructionTable[0xC8]=[1,2,`INY`];
         this.instructionTable[0xC9]=[2,2,`CMP %d`];
         this.instructionTable[0xCA]=[1,2,`DEX`];
+        this.instructionTable[0xCB]=[2,2,`AXS %d`]; // FIXXX num cycles
         this.instructionTable[0xCC]=[3,4,`CPY %d`];
         this.instructionTable[0xCD]=[3,4,`CMP %d`];
         this.instructionTable[0xCE]=[3,6,`DEC %d`];
@@ -188,6 +192,7 @@ class cpu6510
         this.instructionTable[0xF6]=[2,6,`INC %d,X`];
         this.instructionTable[0xF8]=[1,2,`SED`];
         this.instructionTable[0xF9]=[3,4,`SBC %d`];
+        this.instructionTable[0xFC]=[3,4,`NOP %d`];
         this.instructionTable[0xFD]=[3,4,`SBC %d,X`];
         this.instructionTable[0xFE]=[3,7,`INC %d,X`];
     }
@@ -208,7 +213,6 @@ class cpu6510
         this.flagsV=0;
         this.flagsN=0;
 
-        //this.sp=0xfd;
         this.sp=0xff;
 
         // PC = byte at $FFFD * 256 + byte at $FFFC 
@@ -338,17 +342,18 @@ class cpu6510
     calcRelativeBranch(operand)
     {
         var branchspan = operand;
-        if (operand > 0x7f)
+
+        if (operand & 0x80) 
         {
-            branchspan = -((-operand)&0xff);
-        }
+            branchspan = -((~operand) & 0xff) - 1;
+        }        
 
         return (branchspan);
     }
 
-    calcPagecrossPenalty(address)
+    calcPagecrossPenalty2(address,oldPc)
     {
-        if (((this.pc+2) & 0xff00) !== (address & 0xff00))
+        if (((address ^ oldPc) & 0xff00)!=0)
         {
             return 1;
         }
@@ -486,22 +491,6 @@ class cpu6510
         }
     }
 
-    flagsToPRegister()
-    {
-        var p=0;
-
-        if (this.flagsN) p|=0x80;
-        if (this.flagsV) p|=0x40;
-        p|=0x20;
-        if (this.flagsB) p|=0x10;
-        if (this.flagsD) p|=0x08;
-        if (this.flagsI) p|=0x04;
-        if (this.flagsZ) p|=0x02;
-        if (this.flagsC) p|=0x01;
-
-        return p;
-    }
-
     executeOneOpcode()
     {
         var elapsedCycles=0;
@@ -538,10 +527,9 @@ class cpu6510
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
 
-                //this.flagsI=1; 
+                this.flagsI=1; 
 
                 this.pc = this.mmu.readAddr16bit(jumpto);
-                this.totCycles+=7;
                 elapsedCycles+=7;
             }
         }
@@ -575,8 +563,10 @@ class cpu6510
                 this.mmu.writeAddr(0x100 | this.sp, tmp);
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
-
+                
                 this.flagsI=1;
+                //this.flagsB=1; //?
+                //this.ciaIrqPending=true;
 
                 this.pc = this.mmu.readAddr16bit(0xFFFE);
                 break;
@@ -700,11 +690,12 @@ class cpu6510
                 // BPL relative (Branch if Positive)
                 if (this.flagsN==0)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -719,7 +710,7 @@ class cpu6510
                 var finalAddress=(address+this.y)&0xffff;
                 this.a|=this.mmu.readAddr(finalAddress);
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(address,this.y);
+                elapsedCycles+=this.pageCross(address,this.y);
                 break;
             }
             case 0x15:
@@ -763,7 +754,7 @@ class cpu6510
                 var iop = this.mmu.readAddr((operand+this.y)&0xffff);
                 this.a |= iop;
                 this.doFlagsNZ(this.a);            
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
             case 0x1D:
@@ -773,7 +764,7 @@ class cpu6510
                 var iop = this.mmu.readAddr((operand+this.x)&0xffff);
                 this.a |= iop;
                 this.doFlagsNZ(this.a);            
-                this.totCycles+=this.pageCross(operand,this.x);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0x1E:
@@ -1013,11 +1004,12 @@ class cpu6510
                 // BMI offset
                 if (this.flagsN==1)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -1032,7 +1024,7 @@ class cpu6510
                 var finval=this.mmu.readAddr((indi+this.y)&0xffff);
                 this.a&=finval;
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(indi,this.y);
+                elapsedCycles+=this.pageCross(indi,this.y);
                 break;
             }
             case 0x35:
@@ -1079,7 +1071,12 @@ class cpu6510
                 var addressToRead=(operand+this.y)&0xffff;
                 this.a&=this.mmu.readAddr(addressToRead);
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
+                break;
+            }
+            case 0x3c:
+            {
+                // NOP undocumented
                 break;
             }
             case 0x3d:
@@ -1089,7 +1086,7 @@ class cpu6510
                 var addressToRead=(operand+this.x)&0xffff;
                 this.a&=this.mmu.readAddr(addressToRead);
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(operand,this.x);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0x3E:
@@ -1143,7 +1140,7 @@ class cpu6510
 
                 this.pc = (pclo) | (pchi << 8);
                 
-                this.totCycles+= 6;
+                elapsedCycles+= 6;
                 jumped=true;
                 break;
             }
@@ -1269,11 +1266,12 @@ class cpu6510
                 // BVC offset
                 if (this.flagsV==0)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -1288,7 +1286,7 @@ class cpu6510
                 var finval=this.mmu.readAddr((indi+this.y)&0xffff);
                 this.a^=finval;
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(indi,this.y);
+                elapsedCycles+=this.pageCross(indi,this.y);
                 break;
             }
             case 0x55:
@@ -1335,7 +1333,7 @@ class cpu6510
                 var iop=this.mmu.readAddr((operand+this.y)&0xffff);
                 this.a^=iop;
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
             case 0x5D:
@@ -1544,11 +1542,12 @@ class cpu6510
                 // BVS offset
                 if (this.flagsV==1)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -1562,7 +1561,7 @@ class cpu6510
                 var indi = this.mmu.readAddr16bit(operand);
                 var finval=this.mmu.readAddr((indi+this.y)&0xffff);
                 this.doAdc(finval);
-                this.totCycles+=this.pageCross(indi,this.y);
+                elapsedCycles+=this.pageCross(indi,this.y);
                 break;
             }
             case 0x75:
@@ -1615,7 +1614,7 @@ class cpu6510
                 var operand=this.mmu.readAddr16bit(this.pc+1);
                 var iop=this.mmu.readAddr((operand+this.y)&0xffff);
                 this.doAdc(iop);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
             case 0x7D:
@@ -1624,7 +1623,7 @@ class cpu6510
                 var operand=this.mmu.readAddr16bit(this.pc+1);
                 var iop=this.mmu.readAddr((operand+this.x)&0xffff);
                 this.doAdc(iop);
-                this.totCycles+=this.pageCross(operand,this.x);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0x7E:
@@ -1734,11 +1733,12 @@ class cpu6510
                 // BCC offset
                 if (this.flagsC==0)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
                     
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -1900,11 +1900,12 @@ class cpu6510
                 // BCS offset
                 if (this.flagsC==1)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -1919,7 +1920,7 @@ class cpu6510
                 var finalAddress=(address+this.y)&0xffff;
                 this.a=this.mmu.readAddr(finalAddress);
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(address,this.y);
+                elapsedCycles+=this.pageCross(address,this.y);
                 break;
             }
             case 0xb4:
@@ -1959,7 +1960,7 @@ class cpu6510
                 var val=this.mmu.readAddr((operand+this.y)&0xffff);
                 this.a = val;
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
             case 0xba:
@@ -1976,7 +1977,7 @@ class cpu6510
                 var addressToRead=(operand+this.x)&0xffff;
                 this.y=this.mmu.readAddr(addressToRead);
                 this.doFlagsNZ(this.y);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
             case 0xbd:
@@ -1986,7 +1987,7 @@ class cpu6510
                 var addressToRead=(operand+this.x)&0xffff;
                 this.a=this.mmu.readAddr(addressToRead);
                 this.doFlagsNZ(this.a);
-                this.totCycles+=this.pageCross(operand,this.x);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0xbe:
@@ -1997,7 +1998,7 @@ class cpu6510
                 var memr = this.mmu.readAddr(addr);
                 this.x = memr;
                 this.doFlagsNZ(this.x);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
             case 0xC0:
@@ -2089,6 +2090,18 @@ class cpu6510
                 this.doFlagsNZ(this.x);
                 break;
             }
+            case 0xCB:
+            {
+                // ASX or SBX, undocumented, X = A & X - #{imm}
+                var operand=this.mmu.readAddr(this.pc+1);
+                this.x=(this.a&this.x)-operand;
+                if (this.x<0) this.x&=0xff;
+
+                // this.flagsC ??? FIXXX
+                
+                this.doFlagsNZ(this.x);
+                break;
+            }
             case 0xCC:
             {
                 // CPY absolute
@@ -2114,11 +2127,12 @@ class cpu6510
                 // BNE offset
                 if (this.flagsZ==0)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -2135,7 +2149,7 @@ class cpu6510
                 if (this.a>=finval) this.flagsC=1;
                 else this.flagsC=0;
                 this.doFlagsNZ(this.a-finval);
-                this.totCycles+=this.pageCross(indi,this.y);
+                elapsedCycles+=this.pageCross(indi,this.y);
                 break;
             }
             case 0xD5:
@@ -2173,7 +2187,7 @@ class cpu6510
                 if (this.a>=iop) this.flagsC=1;
                 else this.flagsC=0;
                 this.doFlagsNZ(this.a-iop);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
             case 0xDD:
@@ -2184,7 +2198,7 @@ class cpu6510
                 if (this.a>=iop) this.flagsC=1;
                 else this.flagsC=0;
                 this.doFlagsNZ(this.a-iop);
-                this.totCycles+=this.pageCross(operand,this.x);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0xDE:
@@ -2301,11 +2315,12 @@ class cpu6510
                 // BEQ
                 if (this.flagsZ==1)
                 {
+                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
                     var newaddr = this.pc + 2 + branchAmount;
-                    this.totCycles += (1 + this.calcPagecrossPenalty(newaddr));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -2319,7 +2334,7 @@ class cpu6510
                 var indi = this.mmu.readAddr16bit(operand);
                 var finval=this.mmu.readAddr((indi+this.y)&0xffff);
                 this.doSbc(finval);
-                this.totCycles+=this.pageCross(indi,this.y);
+                elapsedCycles+=this.pageCross(indi,this.y);
                 break;
             }
             case 0xf5:
@@ -2353,7 +2368,13 @@ class cpu6510
                 var operand=this.mmu.readAddr16bit(this.pc+1);
                 var iop = this.mmu.readAddr((operand+this.y)&0xffff);
                 this.doSbc(iop);
-                this.totCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.y);
+                break;
+            }
+            case 0xFC:
+            {
+                // NOP abs, x undocumented
+                var operand=this.mmu.readAddr16bit(this.pc+1);
                 break;
             }
             case 0xFD:
@@ -2362,7 +2383,7 @@ class cpu6510
                 var operand=this.mmu.readAddr16bit(this.pc+1);
                 var iop = this.mmu.readAddr((operand+this.x)&0xffff);
                 this.doSbc(iop);
-                this.totCycles+=this.pageCross(operand,this.x);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0xFE:
@@ -2386,6 +2407,7 @@ class cpu6510
 
         if (!jumped) this.pc+=this.instructionTable[nextOpcode][0];
 
+        this.totCycles+=elapsedCycles;
         this.totCycles+=this.instructionTable[nextOpcode][1];
         elapsedCycles+=this.instructionTable[nextOpcode][1];
 

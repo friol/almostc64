@@ -7,6 +7,7 @@ class cia
         this.ciaId=id;
 
         this.icr1=0;
+        
         this.irqControlReg_dc0d=0;
         this.dataPortA=0;
 
@@ -16,9 +17,17 @@ class cia
         this.timerACtrl_dc0e=0;
         this.timerAisRunning=false;
 
+        this.timerBlatch=0;
+        this.timerB_dc06=0;
+        this.timerB_dc07=0;
+        this.timerBCtrl_dc0f=0;
+        this.timerBisRunning=false;
+
         this.datadirregA=0;
         this.datadirregB=0;
         this.controlReg2=0;
+
+        this.curJoystick=1;
 
         this.keyboardKeyList=[];
 
@@ -107,6 +116,69 @@ class cia
             }
         }
 
+        // joystick 1
+        if (this.curJoystick==1)
+        {
+            for (var curk=0;curk<this.keyboardKeyList.length;curk++)
+            {
+                if (this.keyboardKeyList[curk] == "Control")
+                {
+                    retByte &= 0xEF;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowLeft")
+                {
+                    retByte &= 0xfb;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowRight")
+                {
+                    retByte &= 0xf7;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowUp")
+                {
+                    retByte &= 0xfe;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowDown")
+                {
+                    retByte &= 0xfd;
+                }
+            }
+        }
+
+        return retByte;
+    }
+
+    buildCia1PortAByte()
+    {
+        // joystick 2
+        var retByte = 0xff;
+
+        if (this.curJoystick==2)
+        {
+            for (var curk=0;curk<this.keyboardKeyList.length;curk++)
+            {
+                if (this.keyboardKeyList[curk] == "Control")
+                {
+                    retByte &= 0xEF;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowLeft")
+                {
+                    retByte &= 0xfb;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowRight")
+                {
+                    retByte &= 0xf7;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowUp")
+                {
+                    retByte &= 0xfe;
+                }
+                else if (this.keyboardKeyList[curk]=="ArrowDown")
+                {
+                    retByte &= 0xfd;
+                }
+            }
+        }
+        
         return retByte;
     }
 
@@ -125,7 +197,8 @@ class cia
                 if ((this.irqControlReg_dc0d & 0x01) == 0x01)
                 {
                     // trigger maskable irq
-                    theCpu.ciaIrqPending=true;
+                    if (this.ciaId==1) theCpu.ciaIrqPending=true;
+                    if (this.ciaId==2) theCpu.nmiPending=true;
                     this.icr1 |= 0x80;
                 }
 
@@ -146,6 +219,44 @@ class cia
                 this.timerA_dc05 = ((timerVal >> 8) & 0xff);
             }
         }
+
+        //
+
+        if (this.timerBisRunning)
+        {
+            var timerLow = this.timerB_dc06;
+            var timerHigh = this.timerB_dc07;
+            var timerVal = timerLow | (timerHigh << 8);
+
+            timerVal -= elapsedCycles;
+            if (timerVal <= 0)
+            {
+                this.icr1 |= 0x02;
+                if ((this.irqControlReg_dc0d & 0x02) == 0x02)
+                {
+                    //theLogger.logWrite("cia#2 timer B firing");
+                    // trigger maskable irq
+                    theCpu.nmiPending = true;
+                    this.icr1 |= 0x80;
+                }
+
+                // must be retriggered?
+                if ((this.timerBCtrl_dc0f & 0x08) == 0)
+                {
+                    this.timerB_dc06 = (this.timerBlatch & 0xff)&0xff;
+                    this.timerB_dc07 = ((this.timerBlatch >> 8) & 0xff);
+                }
+                else
+                {
+                    this.timerBisRunning = false;
+                }
+            }
+            else
+            {
+                this.timerB_dc06 = (timerVal & 0xff);
+                this.timerB_dc07 = ((timerVal >> 8) & 0xff);
+            }
+        }
     }
 
     cia2getVICbank()
@@ -155,17 +266,16 @@ class cia
 
     readCIARegister(addr)
     {
-        if (this.ciaId==1) addr = (addr & 0xff) | 0xdc00;
-        if (this.ciaId==2) addr = (addr & 0xff) | 0xdd00;
+        if (this.ciaId==1) addr = (addr%0x10) | 0xdc00;
+        if (this.ciaId==2) addr = (addr%0x10) | 0xdd00;
 
         if (addr==0xdc00)
         {
-            //return buildCia1PortAByte();
-            return 0xff;
+            return this.buildCia1PortAByte();
         }
         else if (addr==0xdd00)
         {
-            return this.dataPortA;
+			return ((this.dataPortA | (~this.datadirregA)) & 0x3f)&0xff;
         }
         else if (addr==0xdc01)
         {
@@ -188,7 +298,15 @@ class cia
         {
             return this.timerA_dc05;
         }
-        else if (addr==0xdc08)
+        else if ((addr==0xdc06)||(addr==0xdd06))
+        {
+            return this.timerB_dc06;
+        }
+        else if ((addr==0xdc07)||(addr==0xdd07))
+        {
+            return this.timerB_dc07;
+        }
+        /*else if (addr==0xdc08)
         {
             // $DC08 - Time Of Day, Tenths Of Seconds
             var d = new Date();
@@ -205,6 +323,15 @@ class cia
             console.log("CIA "+this.ciaId.toString()+"::TOD returning seconds ["+sbcd.toString(16)+"]");
             return sbcd;    
         }
+        else if (addr==0xdc0a)
+        {
+            // $DC0A - Time Of Day, Minutes
+            var d=new Date();
+            var s=d.getMinutes();
+            var sbcd=parseInt(s.toString(10),16);
+            console.log("CIA "+this.ciaId.toString()+"::TOD returning minutes ["+sbcd.toString(16)+"]");
+            return sbcd;    
+        }*/
         else if (addr==0xdc0d)
         {
             var ret = this.icr1;
@@ -242,12 +369,12 @@ class cia
         if ((addr==0xdc00)||(addr==0xdd00))
         {
             this.setDataPortA(value);
-            if ((this.ciaId==2)&&(addr==0xdd00)) console.log("CIA2 set dataportA DD00 "+value.toString(16));
+            //if ((this.ciaId==2)&&(addr==0xdd00)) console.log("CIA2 set dataportA DD00 "+value.toString(16));
         }
         else if ((addr==0xdc02)||(addr==0xdd02))
         {
             this.datadirregA=value;
-            if ((this.ciaId==2)&&(addr==0xdd02)) console.log("CIA2 set datadirregA DD02 "+value.toString(16));
+            //if ((this.ciaId==2)&&(addr==0xdd02)) console.log("CIA2 set datadirregA DD02 "+value.toString(16));
         }
         else if ((addr==0xdc03)||(addr==0xdd03))
         {
@@ -264,6 +391,22 @@ class cia
             this.timerA_dc05=value;
             this.timerAlatch|=(value<<8)&0xff00;
             //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch high byte dc05 - latch value is "+this.timerAlatch.toString(16));
+        }
+        else if ((addr==0xdc06)||(addr==0xdd06))
+        {
+            this.timerB_dc06=value;
+            this.timerBlatch|=value&0xff;
+        }
+        else if ((addr==0xdc07)||(addr==0xdd07))
+        {
+            this.timerB_dc07=value;
+            this.timerBlatch|=(value<<8)&0xff00;
+        }
+        else if ((addr==0xdc0c)||(addr==0xdd0c))
+        {
+            // DC0C/DD0C - CIA #1/#2 Synchronous Serial I/O Data Buffer
+            // 8bit shift register for serial input/output.
+            // do nothing // FIXXX
         }
         else if ((addr==0xdc0d)||(addr==0xdd0d))
         {
@@ -300,6 +443,15 @@ class cia
         else if ((addr==0xdc0f)||(addr==0xdd0f))
         {
             this.controlReg2=value;
+
+            if ((this.controlReg2 & 0x01) == 0x01)
+            {
+                this.timerBisRunning = true;
+            }
+            else
+            {
+                this.timerBisRunning = false;
+            }
         }
         else
         {

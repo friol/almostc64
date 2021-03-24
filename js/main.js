@@ -1,10 +1,8 @@
-/* main.js */
+/* Almost C64 emulator - main.js */
 
 var globalListOfOpcodes;
 var globalEmuStatus=0; // 0 debugging single step, 1 running
-var globalFrameNum=0;
 var globalOldCyc=0;
-var globalSchedulePeriod=80;
 
 var glbMMU;
 
@@ -21,10 +19,23 @@ function startupFunction()
 	var ciaChip1=new cia(1);
 	var ciaChip2=new cia(2);
 	var vicChip=new vic();
-	glbMMU=new c64mmu(vicChip,ciaChip1,ciaChip2);
+	var sidChip=new sid();
+	glbMMU=new c64mmu(vicChip,ciaChip1,ciaChip2,sidChip);
 	var cpu=new cpu6510(glbMMU);
 	ciaChip1.linkCpu(cpu);
 	ciaChip2.linkCpu(cpu);
+
+	var rad = document.joyform.joySelection;
+	var prev = null;
+	for (var i = 0; i < rad.length; i++) {
+		rad[i].addEventListener('change', function() 
+		{
+			if (this.value=="joy1") ciaChip1.curJoystick=1;
+			else ciaChip1.curJoystick=2;
+		});
+	}
+
+	globalEmuStatus=1;
 
 	document.getElementById("mainCanvass").addEventListener("mousemove",function(e)
 	{
@@ -37,7 +48,7 @@ function startupFunction()
 
 	document.onkeydown = function(e)
 	{
-		if (e.key=="ArrowRight")
+		if (e.key=="F10")
 		{
 			// single debugger step
 			var elcyc=cpu.executeOneOpcode();			
@@ -56,7 +67,7 @@ function startupFunction()
 				ciaChip2.update(elcyc,cpu);
 			}
 		}*/
-		else if (e.key=="ArrowDown")
+		else if (e.key=="PageDown")
 		{
 			// run to cursor
 			var targetPC=cpu.runToCursor(30,globalListOfOpcodes);
@@ -84,43 +95,74 @@ function startupFunction()
 				}				
 			}
 		}
-		else if (e.key=="ArrowUp")
+		else if (e.key=="F8")
 		{
 			// run
 			globalEmuStatus=1;
 			document.getElementById("mainCanvass").width=402;
 			document.getElementById("mainCanvass").height=292;
 		}
-		else if (e.key=="ArrowLeft")
+		else if (e.key=="F9")
 		{
 			// stop
 			globalEmuStatus=0;
 			document.getElementById("mainCanvass").width=900;
 			document.getElementById("mainCanvass").height=600;
 		}
-		else if (e.key=="PageDown")
-		{
-			vicChip.debaggaAdder+=0x100;	
-		}
 		else
 		{
+			for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") 
+			{
+				if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key==c)) ciaChip1.keyPress(c.toLowerCase());
+			}
+
 			if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="\"")) ciaChip1.keyPress("2");
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="£")) ciaChip1.keyPress("3");
 			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="$")) ciaChip1.keyPress("4");
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="%")) ciaChip1.keyPress("5");
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="&")) ciaChip1.keyPress("6");
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="/")) ciaChip1.keyPress("7");
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key=="(")) ciaChip1.keyPress("8");
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key==")")) ciaChip1.keyPress("9");
+			else if (e.key=="<") 
+			{
+				ciaChip1.keyPress("Shift");
+				ciaChip1.keyPress(",");
+			}
+			else if ((ciaChip1.keyboardKeyList.indexOf("Shift")>=0) && (e.key==">")) 
+			{
+				ciaChip1.keyPress("Shift");
+				ciaChip1.keyPress(".");
+			}
 			else ciaChip1.keyPress(e.key);
 		}
 
 		if (e.key=="Backspace") e.preventDefault();
 		if (e.key=="F1") e.preventDefault();
+		if (e.key=="F8") e.preventDefault();
+		if (e.key=="F9") e.preventDefault();
+		if (e.key=="F10") e.preventDefault();
+		if (e.key=="PageDown") e.preventDefault();
 	};
 
 	document.onkeyup = function(e)
 	{
-		//if ((e.key=="ArrowDown")||(e.key=="ArrowUp")||(e.key=="ArrowLeft")||(e.key=="ArrowRight")||(e.key=="p")||(e.key=="o")||(e.key=="k")||(e.key=="l"))
+		for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") 
 		{
-			if (e.key=="\"") ciaChip1.keyUp("2");
-			else if (e.key=="$") ciaChip1.keyUp("4");
-			else ciaChip1.keyUp(e.key);
+			if (e.key==c) ciaChip1.keyUp(c.toLowerCase());
 		}
+
+		if (e.key=="\"") ciaChip1.keyUp("2");
+		else if (e.key=="£") ciaChip1.keyUp("3");
+		else if (e.key=="$") ciaChip1.keyUp("4");
+		else if (e.key=="%") ciaChip1.keyUp("5");
+		else if (e.key=="&") ciaChip1.keyUp("6");
+		else if (e.key=="/") ciaChip1.keyUp("7");
+		else if (e.key=="(") ciaChip1.keyUp("8");
+		else if (e.key==")") ciaChip1.keyUp("9");
+		else if (e.key=="<") { ciaChip1.keyUp("Shift"); ciaChip1.keyUp(","); }
+		else if (e.key==">") { ciaChip1.keyUp("."); }
+		else ciaChip1.keyUp(e.key);
 	}
 	
 	window.setTimeout(function() {cpu.powerUp();},200);
@@ -145,6 +187,12 @@ function startupFunction()
 					ciaChip1.update(elcyc,cpu);
 					ciaChip2.update(elcyc,cpu);
 					vicChip.updateVic(elcyc,cpu);
+
+					/*if (this.pc==2070)
+					{
+						globalEmuStatus=0;
+						break;
+					}*/
 				}			
 
 				//globalListOfOpcodes=new Array();
@@ -155,7 +203,6 @@ function startupFunction()
 				vicChip.simpleRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
 
 				globalOldCyc=cpu.totCycles;
-				globalFrameNum+=1;
 			}
 		}
 
@@ -168,7 +215,7 @@ function startupFunction()
 		var fpeez=(1000/frameTime).toFixed(1);
 		fpsOut.innerHTML = fpeez + " fps";
 
-		window.setTimeout(updateScreen, 1000 / globalSchedulePeriod);
+		window.setTimeout(updateScreen, 13);
 	}
 
 	updateScreen();

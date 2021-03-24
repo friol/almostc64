@@ -5,10 +5,11 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>AlmostC64 v0.2</title>
+    <title>AlmostC64 v0.3</title>
 
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/sid.js"></script>
     <script src="js/cia.js"></script>
     <script src="js/sprite.js"></script>
     <script src="js/vic.js"></script>
@@ -16,18 +17,27 @@
     <script src="js/cpu6510.js"></script>
     <script src="js/main.js"></script>
 
-    <!--<link rel="stylesheet" type="text/css" href="css/main.css" />-->
+    <link rel="stylesheet" type="text/css" href="css/main.css" />
 </head>
 <body>
 
-AlmostC64 v0.2 - <span id="fpsSpan">-</span> <span id="keydebug">-</span><br/>
+<img src="img/almost64logo.png" /> - Commodore64 emulator v0.3 - <span id="fpsSpan">-</span><br/>
 
-<canvas id="mainCanvass" width="900" height="520" style="float:left"></canvas>
-
-<br/>
+<canvas id="mainCanvass" width="402" height="292" style="float:left"></canvas>
 
 <br/>
-<input type="file" id="input" onchange="handleFileUpload(this.files)" style="float:left;clear:both;">
+<br/>
+
+<input type="file" id="input" onchange="handleFileUpload(this.files)" style="float:left;clear:both;margin-top:10px">
+
+<form name="joyform" style="float:left;margin-top:10px">
+<div>
+    <input type="radio" id="joy1" name="joySelection" value="joy1" checked>
+    <label for="joy1">Joy1</label>
+    <input type="radio" id="joy2" name="joySelection" value="joy2">
+    <label for="joy2">Joy2</label>
+</div>
+</form>
 
 </body>
 </html>

@@ -2,7 +2,7 @@
 
 class c64mmu
 {
-    constructor(vicChip,ciaChip1,ciaChip2)
+    constructor(vicChip,ciaChip1,ciaChip2,sidChip)
     {
         this.basic_in=false;
         this.kernal_in=true;
@@ -22,6 +22,7 @@ class c64mmu
         this.vicChip=vicChip;
         this.ciaChip1=ciaChip1;
         this.ciaChip2=ciaChip2;
+        this.sidChip=sidChip;
 
         this.dataDirReg=0x2f;
         this.processorPortReg=0x37;
@@ -124,7 +125,25 @@ class c64mmu
 
     readAddr(addr)
     {
-        if (addr==0x0000)
+        if ((addr >= 0xa000) && (addr <= 0xbfff))
+        {
+            if (!this.basic_in)
+            {
+                // fallthrough ram
+                return this.ram64k[addr];
+            }
+            else
+            {
+                // basic rom
+                return this.basicROM[addr - 0xa000];
+            }
+        }        
+        else if ((addr >= 0xc000) && (addr <= 0xcfff))
+        {
+            // upper ram
+            return this.ram64k[addr];
+        }
+        else if (addr==0x0000)
         {
             return this.dataDirReg;
         }
@@ -147,24 +166,6 @@ class c64mmu
         else if ((addr >= 0x8000) && (addr <= 0x9fff))
         {
             // $8000-$9FFF, optional cartridge rom or RAM            
-            return this.ram64k[addr];
-        }
-        else if ((addr >= 0xa000) && (addr <= 0xbfff))
-        {
-            if (!this.basic_in)
-            {
-                // fallthrough ram
-                return this.ram64k[addr];
-            }
-            else
-            {
-                // basic rom
-                return this.basicROM[addr - 0xa000];
-            }
-        }        
-        else if ((addr >= 0xc000) && (addr <= 0xcfff))
-        {
-            // upper ram
             return this.ram64k[addr];
         }
         else if ((addr >= 0xd000) && (addr <= 0xdfff))
@@ -196,8 +197,7 @@ class c64mmu
                 }
                 else if ((addr >= 0xd400) && (addr <= 0xd7ff))
                 {
-                    //return theSid.readRegister(address);
-                    return 0;
+                    return this.sidChip.readRegister(addr);
                 }
                 else if ((addr>=0xd800)&&(addr<=0xdbff))
                 {

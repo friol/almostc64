@@ -4,7 +4,8 @@ class vic
 {
     constructor()
     {
-        this.debaggaAdder=0;
+        this.imgData=undefined;
+        this.canvasRenderer=undefined;
 
         this.rasterTicker=0;
         this.currentRasterLine=0;
@@ -278,6 +279,10 @@ class vic
         {
             this.spriteColors_d027_d02e[addr-0xd027]=value;
         }
+        else if (addr==0xd030)
+        {
+            // unused reg on C64
+        }
         else
         {
             console.log("VIC::write ["+value.toString(16)+"] to unhandled reg "+addr.toString(16));
@@ -311,9 +316,17 @@ class vic
         {
             return (this.currentRasterLine & 0xff);
         }
+        else if (addr==0xd015)
+        {
+            return this.spriteEnable_d015;
+        }
         else if (addr==0xd016)
         {
             return (this.controlreg2_d016|0xc0);
+        }
+        else if (addr==0xd017)
+        {
+            return this.spriteExpandVertical_d017;            
         }
         else if (addr==0xd018)
         {
@@ -323,6 +336,18 @@ class vic
         {
             // interrupt status register
             return (this.intstatusreg| 0x70)&0xff;
+        }
+        else if (addr == 0xD01A)
+        {
+            return (this.irqEnable_d01a | 0xf0)&0xff;
+        }
+        else if (addr==0xd01b)
+        {
+            return this.spriteBackgroundPriority_d01b;
+        }
+        else if (addr==0xd01c)
+        {
+            return this.spriteMulticolorMode_d01c;
         }
         else if (addr==0xd01d)
         {
@@ -359,6 +384,10 @@ class vic
         else if (addr==0xd025)
         {
             return this.spriteMulticolor0_d025;
+        }
+        else if ((addr>=0xd027)&&(addr<=0xd02e))
+        {
+            return this.spriteColors_d027_d02e[addr-0xd027];
         }
         else if (addr==0xd030)
         {
@@ -414,7 +443,7 @@ class vic
             rgbArr[(col*3)+2]=this.c64palette[(this.backgroundColor[col]*3)+2];
         }
 
-        if (multicolorMode==true)
+        //if (multicolorMode==true)
         {
             var vicbank = cia2.cia2getVICbank();
             var realvicbank = (3 - vicbank) * 0x4000;
@@ -511,7 +540,7 @@ class vic
         var basecoladdr=vicBaseAddr+vicscreenMemoryAddr;
 
         var bitmapMemoryAddr = (this.memoryControlReg_d018 & 0x08) << 10;
-        var baseaddr=vicBaseAddr+bitmapMemoryAddr+this.debaggaAdder;
+        var baseaddr=vicBaseAddr+bitmapMemoryAddr;
 
         var colorRamPos=0;
         for (var y=this.yUpperBorderWidth;y<(this.yUpperBorderWidth+200);y+=8)
@@ -617,23 +646,184 @@ class vic
 
     }
 
-    simpleRenderer(canvasName,px,py,mmu,cia2)
+    drawSprites(chpx,chpy,mmu,cia2)
     {
-        var canvas = document.getElementById(canvasName);
-        var ctx = canvas.getContext("2d");
+        chpx-=25;
+        chpy-=50;
 
+        for (var spritenum = 7; spritenum >=0; spritenum--)
+        {
+            if ((this.spriteEnable_d015 & (1 << spritenum)) != 0)
+            {
+                var sprcolornum = this.spriteColors_d027_d02e[spritenum] & 0x0f;
+                var colArray=new Array(4*3);
+                colArray[6]=this.c64palette[(sprcolornum*3)+0];
+                colArray[7]=this.c64palette[(sprcolornum*3)+1];
+                colArray[8]=this.c64palette[(sprcolornum*3)+2];
+        
+                var posx = this.spritePositionsX[spritenum];
+                if ((this.spritePositionXupperbit_d010 & (1 << spritenum)) > 0) posx |= 256;
+                var posy = this.spritePositionsY[spritenum];
+        
+                var vicbank = cia2.cia2getVICbank()&0xffff;
+                vicbank = (3 - vicbank) * 0x4000;
+                var memsetup2 = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
+        
+                var sprbaseAddress = (mmu.readAddr((vicbank | memsetup2 | 0x3f8) + spritenum)) * 64;
+        
+                var sprExpandHorz = ((this.spriteExpandHorizontal_d01d & (1 << spritenum)) != 0);
+                var sprExpandVert = ((this.spriteExpandVertical_d017 & (1 << spritenum)) != 0);
+
+                var runxpos=chpx+posx;
+                var runypos=chpy+posy;
+
+                if ((this.spriteMulticolorMode_d01c & (1 << spritenum)) == 0)        
+                {
+                    // sprite is monochromatic
+                    for (var ybyte=0;ybyte<21;ybyte++)
+                    {
+                        for (var xbyte=0;xbyte<3;xbyte++)
+                        {
+                            var curbyte = mmu.readAddr((vicbank | sprbaseAddress) + (xbyte+(ybyte*3)));
+
+                            for (var bit = 0; bit < 8; bit++)
+                            {
+                                if ((curbyte & (1 << (7 - bit))) > 0)
+                                {
+                                    this.frameBuffer[0+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[6];
+                                    this.frameBuffer[1+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[7];
+                                    this.frameBuffer[2+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[8];
+                                    this.frameBuffer[3+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=255;
+
+                                    if (sprExpandVert)
+                                    {
+                                        this.frameBuffer[0+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[6];
+                                        this.frameBuffer[1+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[7];
+                                        this.frameBuffer[2+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[8];
+                                        this.frameBuffer[3+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=255;
+                                    }
+
+                                    if (sprExpandHorz)
+                                    {
+                                        this.frameBuffer[4+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[6];
+                                        this.frameBuffer[5+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[7];
+                                        this.frameBuffer[6+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[8];
+                                        this.frameBuffer[7+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=255;
+
+                                        if (sprExpandVert)
+                                        {
+                                            this.frameBuffer[4+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[6];
+                                            this.frameBuffer[5+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[7];
+                                            this.frameBuffer[6+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[8];
+                                            this.frameBuffer[7+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=255;
+                                        }
+                                    }
+                                }
+
+                                if (!sprExpandHorz) runxpos++;
+                                else runxpos+=2;
+                            }
+                        }
+
+                        runxpos=chpx+posx;
+                        
+                        if (!sprExpandVert) runypos++;
+                        else runypos+=2;
+                    }
+                }
+                else
+                {
+                    // sprite is multicolor
+
+                    colArray[3]=this.c64palette[(this.spriteMulticolor0_d025*3)+0];
+                    colArray[4]=this.c64palette[(this.spriteMulticolor0_d025*3)+1];
+                    colArray[5]=this.c64palette[(this.spriteMulticolor0_d025*3)+2];
+
+                    colArray[9]=this.c64palette[(this.spriteMulticolor1_d026*3)+0];
+                    colArray[10]=this.c64palette[(this.spriteMulticolor1_d026*3)+1];
+                    colArray[11]=this.c64palette[(this.spriteMulticolor1_d026*3)+2];
+
+                    for (var ybyte=0;ybyte<21;ybyte++)
+                    {
+                        for (var xbyte=0;xbyte<3;xbyte++)
+                        {
+                            var curbyte = mmu.readAddr((vicbank | sprbaseAddress) + (xbyte+(ybyte*3)));
+
+                            for (var bit = 0; bit < 4; bit++)
+                            {
+                                var bay = (curbyte >> (6 - (bit * 2))) & 0x03;
+                                if (bay > 0)
+                                {
+                                    this.frameBuffer[0+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                    this.frameBuffer[1+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                    this.frameBuffer[2+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                    this.frameBuffer[3+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=255;
+                                    this.frameBuffer[4+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                    this.frameBuffer[5+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                    this.frameBuffer[6+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                    this.frameBuffer[7+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=255;
+
+                                    if (sprExpandVert)
+                                    {
+                                        this.frameBuffer[0+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                        this.frameBuffer[1+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                        this.frameBuffer[2+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                        this.frameBuffer[3+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=255;
+                                        this.frameBuffer[4+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                        this.frameBuffer[5+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                        this.frameBuffer[6+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                        this.frameBuffer[7+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=255;
+                                    }
+
+                                    if (sprExpandHorz)
+                                    {
+                                        this.frameBuffer[8+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                        this.frameBuffer[9+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                        this.frameBuffer[10+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                        this.frameBuffer[11+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=255;
+                                        this.frameBuffer[12+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                        this.frameBuffer[13+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                        this.frameBuffer[14+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                        this.frameBuffer[15+(runxpos*4)+(runypos*this.xResolutionTotal)*4]=255;
+
+                                        if (sprExpandVert)
+                                        {
+                                            this.frameBuffer[8+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                            this.frameBuffer[9+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                            this.frameBuffer[10+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                            this.frameBuffer[11+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=255;
+                                            this.frameBuffer[12+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[0+bay*3];
+                                            this.frameBuffer[13+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[1+bay*3];
+                                            this.frameBuffer[14+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=colArray[2+bay*3];
+                                            this.frameBuffer[15+(runxpos*4)+((runypos+1)*this.xResolutionTotal)*4]=255;
+                                        }
+                                    }
+                                }
+
+                                if (!sprExpandHorz) runxpos+=2;
+                                else runxpos+=4;
+                            }
+                        }
+
+                        runxpos=chpx+posx;
+                        
+                        if (!sprExpandVert) runypos++;
+                        else runypos+=2;
+                    }                    
+
+                }
+            }
+        }        
+    }
+
+    drawBorder()
+    {
         var palnum=this.foregroundColor;
         var p1=this.c64palette[(palnum*3)+0];
         var p2=this.c64palette[(palnum*3)+1];
         var p3=this.c64palette[(palnum*3)+2];
 
-        var borderColor="rgb("+p1+","+p2+","+p3+")";        
-
-        // draw entire area, border color
-        ctx.fillStyle=borderColor;
-        ctx.fillRect(px,py,this.xResolutionTotal,this.yResolutionTotal);
-
-        for (var i=0;i<(this.xResolutionTotal*this.yResolutionTotal*4);i+=4)
+        for (var i=0;i<(this.xResolutionTotal*this.yUpperBorderWidth*4);i+=4)
         {
             this.frameBuffer[i+0]=p1;
             this.frameBuffer[i+1]=p2;
@@ -641,52 +831,119 @@ class vic
             this.frameBuffer[i+3]=255;
         }        
 
-        if ((this.screencontrol1_d011&0x20)==0)
+        for (var y=this.yUpperBorderWidth;y<(this.yResolutionTotal-this.yUpperBorderWidth);y++)
         {
-            // draw inner area
-            var colorRamAddr=0xd800;
+            for (var x=0;x<this.xLeftBorderWidth;x++)
+            {
+                this.frameBuffer[0+(x*4)+(y*this.xResolutionTotal*4)]=p1;
+                this.frameBuffer[1+(x*4)+(y*this.xResolutionTotal*4)]=p2;
+                this.frameBuffer[2+(x*4)+(y*this.xResolutionTotal*4)]=p3;
+                this.frameBuffer[3+(x*4)+(y*this.xResolutionTotal*4)]=255;
+            }
+        }
+
+        for (var y=this.yUpperBorderWidth;y<(this.yResolutionTotal-this.yUpperBorderWidth);y++)
+        {
+            for (var x=this.xLeftBorderWidth+320;x<this.xResolutionTotal;x++)
+            {
+                this.frameBuffer[0+(x*4)+(y*this.xResolutionTotal*4)]=p1;
+                this.frameBuffer[1+(x*4)+(y*this.xResolutionTotal*4)]=p2;
+                this.frameBuffer[2+(x*4)+(y*this.xResolutionTotal*4)]=p3;
+                this.frameBuffer[3+(x*4)+(y*this.xResolutionTotal*4)]=255;
+            }
+        }
+
+        for (var i=(this.yUpperBorderWidth+200)*this.xResolutionTotal*4;i<(this.xResolutionTotal*this.yResolutionTotal*4);i+=4)
+        {
+            this.frameBuffer[i+0]=p1;
+            this.frameBuffer[i+1]=p2;
+            this.frameBuffer[i+2]=p3;
+            this.frameBuffer[i+3]=255;
+        }        
+
+    }
+
+    simpleRenderer(canvasName,px,py,mmu,cia2)
+    {
+        var canvas = document.getElementById(canvasName);
+        var ctx = canvas.getContext("2d");
+
+        if ((this.screencontrol1_d011 & 0x10)!=0) // screen not blanked
+        {
+            if ((this.screencontrol1_d011&0x20)==0)
+            {
+                // draw inner area
+                var colorRamAddr=0xd800;
+                var chpx=px+this.xLeftBorderWidth;
+                var chpy=py+this.yUpperBorderWidth;
+
+                var vicbank = cia2.cia2getVICbank();
+                vicbank = (3 - vicbank) * 0x4000;
+                var videopage = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
+
+                var mempos = ((this.memoryControlReg_d018 >> 1) & 7) * 0x800;
+                mempos |= vicbank;
+
+                for (var y=0;y<this.charmodeNumychars;y++)
+                {
+                    for (var x=0;x<this.charmodeNumxchars;x++)
+                    {
+                        var currentChar=mmu.readAddr(videopage+(x+(y*this.charmodeNumxchars)));
+                        var currentCharCol=mmu.readAddr(colorRamAddr)&0x0f;
+                        this.drawChar(chpx,chpy,currentChar,currentCharCol,ctx,mmu.chargenROM,cia2,mmu,mempos,y,x);
+
+                        chpx+=8;
+                        colorRamAddr++;
+                    }
+
+                    chpy+=8;
+                    chpx=px+this.xLeftBorderWidth;
+                }
+            }
+            else
+            {
+                // bitmap mood
+                this.drawBitmapScreen(ctx,mmu,cia2);
+            }
+
+            //
+            // sprites
+            //
+
             var chpx=px+this.xLeftBorderWidth;
             var chpy=py+this.yUpperBorderWidth;
-
-            for (var y=0;y<this.charmodeNumychars;y++)
-            {
-                for (var x=0;x<this.charmodeNumxchars;x++)
-                {
-                    var vicbank = cia2.cia2getVICbank();
-                    vicbank = (3 - vicbank) * 0x4000;
-                    var videopage = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
-
-                    var mempos = ((this.memoryControlReg_d018 >> 1) & 7) * 0x800;
-                    mempos |= vicbank;
-                    
-                    var currentChar=mmu.readAddr(videopage+(x+(y*this.charmodeNumxchars)));
-                    var currentCharCol=mmu.readAddr(colorRamAddr)&0x0f;
-                    this.drawChar(chpx,chpy,currentChar,currentCharCol,ctx,mmu.chargenROM,cia2,mmu,mempos,y,x);
-
-                    chpx+=8;
-                    colorRamAddr++;
-                }
-
-                chpy+=8;
-                chpx=px+this.xLeftBorderWidth;
-            }
+            this.drawSprites(chpx,chpy,mmu,cia2);
         }
         else
         {
-            // bitmap mood
-            this.drawBitmapScreen(ctx,mmu,cia2);
+            // screen blanked
+            var palnum=this.foregroundColor;
+            var p1=this.c64palette[(palnum*3)+0];
+            var p2=this.c64palette[(palnum*3)+1];
+            var p3=this.c64palette[(palnum*3)+2];
+    
+            for (var p=0;p<(this.xResolutionTotal*this.yResolutionTotal*4);p+=4)            
+            {
+                this.frameBuffer[p+0]=p1;
+                this.frameBuffer[p+1]=p2;
+                this.frameBuffer[p+2]=p3;
+                this.frameBuffer[p+3]=255;
+            }
         }
 
-        // spit it all out
-        var canvas = document.getElementById("mainCanvass");
-        var ctx = canvas.getContext("2d");
-        var imgData = ctx.getImageData(0, 0, this.xResolutionTotal, this.yResolutionTotal);
-        imgData.data.set(this.frameBuffer);
+        this.drawBorder();
 
-        var renderer = document.createElement('canvas');
-        renderer.width = imgData.width;
-        renderer.height = imgData.height;
-        renderer.getContext('2d').putImageData(imgData, 0, 0);
-        ctx.drawImage(renderer, px,py, this.xResolutionTotal, this.yResolutionTotal);
+        // spit it all out
+        if (this.imgData==undefined) this.imgData = ctx.getImageData(0, 0, this.xResolutionTotal, this.yResolutionTotal);
+        this.imgData.data.set(this.frameBuffer);
+
+        if (this.canvasRenderer==undefined)
+        {
+            this.canvasRenderer = document.createElement('canvas');
+            this.canvasRenderer.width = this.imgData.width;
+            this.canvasRenderer.height = this.imgData.height;
+        }
+        this.canvasRenderer.getContext('2d').putImageData(this.imgData, 0, 0);
+        ctx.drawImage(this.canvasRenderer, px,py, this.xResolutionTotal, this.yResolutionTotal);
     }
 }
