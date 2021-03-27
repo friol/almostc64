@@ -139,6 +139,8 @@ function startupFunction()
 
 		if (e.key=="Backspace") e.preventDefault();
 		if (e.key=="F1") e.preventDefault();
+		if (e.key=="F3") e.preventDefault();
+		if (e.key=="F7") e.preventDefault();
 		if (e.key=="F8") e.preventDefault();
 		if (e.key=="F9") e.preventDefault();
 		if (e.key=="F10") e.preventDefault();
@@ -227,6 +229,14 @@ function handleFileUpload(fls)
 	var fileReader = new FileReader();
 	fileReader.onload = function(event) 
 	{
+		var fname=document.getElementById("prgSelector").value;
+
+		if ((fname.indexOf(".prg")<0)&&(fname.indexOf(".PRG")<0))
+		{
+			alert("You can only load .prg files");
+			return;
+		}
+
 		arrayBuffer = event.target.result;
 		var uint8ArrayNew  = new Uint8Array(arrayBuffer);
 

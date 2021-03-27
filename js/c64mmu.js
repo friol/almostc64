@@ -125,6 +125,8 @@ class c64mmu
 
     readAddr(addr)
     {
+        addr&=0xffff;
+
         if ((addr >= 0xa000) && (addr <= 0xbfff))
         {
             if (!this.basic_in)
@@ -239,6 +241,8 @@ class c64mmu
 
     writeAddr(addr,value)
     {
+        addr&=0xffff;
+
         if (addr==0x0000)
         {
             // Processor port data direction register

@@ -275,7 +275,9 @@ class cia
         }
         else if (addr==0xdd00)
         {
-			return ((this.dataPortA | (~this.datadirregA)) & 0x3f)&0xff;
+			//return (this.dataPortA | (~this.datadirregA))&0x3f;
+            //var r=Math.floor(Math.random()*0xff)&0xfc;
+			return 0xd0|(this.dataPortA | (~this.datadirregA))&0x3;
         }
         else if (addr==0xdc01)
         {
@@ -358,6 +360,7 @@ class cia
         else
         {
             console.log("CIA "+this.ciaId.toString()+"::Unmapped read from addr ["+addr.toString(16)+"]");
+            return 0;
         }
     }
 

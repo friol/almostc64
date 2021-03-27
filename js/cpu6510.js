@@ -108,6 +108,7 @@ class cpu6510
 
         this.instructionTable[0x80]=[1,2,`SKB`];
         this.instructionTable[0x81]=[2,6,`STA %d`];
+        this.instructionTable[0x82]=[2,2,`NOP %d`]; // undocumented
         this.instructionTable[0x84]=[2,3,`STY %d`];
         this.instructionTable[0x85]=[2,3,`STA %d`];
         this.instructionTable[0x86]=[2,3,`STX %d`];
@@ -182,6 +183,7 @@ class cpu6510
         this.instructionTable[0xE8]=[1,2,`INX`];
         this.instructionTable[0xE9]=[2,2,`SBC %d`];
         this.instructionTable[0xEA]=[1,2,`NOP`];
+        this.instructionTable[0xEB]=[2,2,`SBC %d`]; // undocumented
         this.instructionTable[0xEC]=[3,4,`CPX %d`];
         this.instructionTable[0xED]=[3,4,`SBC %d`];
         this.instructionTable[0xEE]=[3,6,`INC %d`];
@@ -192,6 +194,7 @@ class cpu6510
         this.instructionTable[0xF6]=[2,6,`INC %d,X`];
         this.instructionTable[0xF8]=[1,2,`SED`];
         this.instructionTable[0xF9]=[3,4,`SBC %d`];
+        this.instructionTable[0xFA]=[1,2,`NOP`]; // undocumented
         this.instructionTable[0xFC]=[3,4,`NOP %d`];
         this.instructionTable[0xFD]=[3,4,`SBC %d,X`];
         this.instructionTable[0xFE]=[3,7,`INC %d,X`];
@@ -518,6 +521,7 @@ class cpu6510
                 var tmp = 0x20;
                 if (this.flagsN) tmp |= 0x80;
                 if (this.flagsV) tmp |= 0x40;
+                //if (this.flagsB) tmp |= 0x10; // FIXXX?
                 if (this.flagsD) tmp |= 0x08;
                 if (this.flagsI) tmp |= 0x04;
                 if (this.flagsZ) tmp |= 0x02;
@@ -543,11 +547,12 @@ class cpu6510
             case 0x00:
             {
                 // BRK
+                //alert("brk");
 
-                this.mmu.writeAddr(0x100 | this.sp,(((this.pc+1) >> 8) & 0xff));
+                this.mmu.writeAddr(0x100 | this.sp,(((this.pc+2) >> 8) & 0xff));
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
-                this.mmu.writeAddr(0x100 | this.sp,(((this.pc+1) & 0xff)));
+                this.mmu.writeAddr(0x100 | this.sp,(((this.pc+2) & 0xff)));
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
 
@@ -565,10 +570,9 @@ class cpu6510
                 if (this.sp<0) this.sp=0xff;
                 
                 this.flagsI=1;
-                //this.flagsB=1; //?
-                //this.ciaIrqPending=true;
 
                 this.pc = this.mmu.readAddr16bit(0xFFFE);
+                jumped=true;
                 break;
             }
             case 0x01:
@@ -613,12 +617,9 @@ class cpu6510
             {
                 // PHP
                 var tmp = 0x20;
-
                 if (this.flagsN) tmp |= 0x80;
                 if (this.flagsV) tmp |= 0x40;
-                //if (this.flagsB) tmp |= 0x10;
-                // B is pushed as 1 by PHP
-                tmp|=0x10;
+                /*if (this.flagsB)*/ tmp |= 0x10;
                 if (this.flagsD) tmp |= 0x08;
                 if (this.flagsI) tmp |= 0x04;
                 if (this.flagsZ) tmp |= 0x02;
@@ -886,7 +887,7 @@ class cpu6510
             {
                 // PLP
                 this.sp++;
-                if (this.sp>0xff) this.sp=0;
+                this.sp&=0xff;
                 var data=this.mmu.readAddr(0x100 | this.sp);
 
                 if ((data & 0x80) != 0) this.flagsN=1;
@@ -1374,12 +1375,6 @@ class cpu6510
                 var pcl = this.mmu.readAddr(0x100|((this.sp + 1)&0xff));
                 var addr = pcl | (pch << 8);
 
-                if ((pcl==0x03)&&(pch==0x02))
-                {
-                    alert("Kaz");
-                    globalEmuStatus=0;
-                } 
-
                 this.pc = addr+1;
                 
                 this.sp += 2;
@@ -1659,7 +1654,7 @@ class cpu6510
             }
             case 0x80:
             {
-                // SKB
+                // SKB undocumented
                 this.pc+=1;
                 break;
             }
@@ -1669,6 +1664,11 @@ class cpu6510
                 var operand=this.mmu.readAddr(this.pc+1);
                 var indi=this.mmu.readAddr16bit((operand+this.x)&0xff);
                 this.mmu.writeAddr(indi,this.a);
+                break;
+            }
+            case 0x82:
+            {
+                // NOP undocumented
                 break;
             }
             case 0x84:
@@ -2131,11 +2131,14 @@ class cpu6510
                     var operand=this.mmu.readAddr(this.pc+1);
                     var branchAmount=this.calcRelativeBranch(operand);
 
-                    var newaddr = this.pc + 2 + branchAmount;
-                    elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
+                    if (branchAmount!=0)
+                    {
+                        var newaddr = this.pc + 2 + branchAmount;
+                        elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
 
-                    this.pc+=branchAmount+2;
-                    jumped=true;
+                        this.pc+=branchAmount+2;
+                        jumped=true;
+                    }
                 }
                 break;
             }
@@ -2280,6 +2283,13 @@ class cpu6510
                 // NOP
                 break;
             }
+            case 0xeb:
+            {
+                // SBC immediate undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                this.doSbc(operand);
+                break;
+            }
             case 0xEC:
             {
                 // CPX absolute
@@ -2371,6 +2381,11 @@ class cpu6510
                 elapsedCycles+=this.pageCross(operand,this.y);
                 break;
             }
+            case 0xFA:
+            {
+                // NOP undocumented
+                break;
+            }
             case 0xFC:
             {
                 // NOP abs, x undocumented
@@ -2405,6 +2420,11 @@ class cpu6510
             }
         }
 
+        if ((this.x==undefined)||(this.y==undefined)||(this.a==undefined)||(this.pc==undefined)||(this.sp==undefined))
+        {
+            alert("undeffff!");
+        }
+
         if (!jumped) this.pc+=this.instructionTable[nextOpcode][0];
 
         this.totCycles+=elapsedCycles;
@@ -2416,6 +2436,8 @@ class cpu6510
         if ((this.y>0xff)||(this.y<0)) alert("Warning: y out of bounds at "+this.pc.toString(16));
         if ((this.sp>0xff)||(this.sp<0)) alert("Warning: sp out of bounds at "+this.pc.toString(16));
         if ((this.pc>0xffff)||(this.pc<0)) alert("Warning: pc out of bounds at "+this.pc.toString(16));
+
+        //var debugLog=this.pc.toString(16)+" "+this.getFlagsString()+" "+this.a.toString(16)+" "+this.x.toString(16)+" "+this.y.toString(16)+" "+this.sp.toString(16);
 
         return elapsedCycles;
     }
