@@ -4,6 +4,7 @@ class sid
 {
     constructor()
     {
+        this.lastSidByte=0;
 
     }
 
@@ -20,7 +21,12 @@ class sid
             console.log("SID::Unmapped read from address ["+addr.toString(16)+"]");
         }
         
-        return 0x0;
+        return this.lastSidByte;
+    }
+
+    writeRegister(addr,value)
+    {
+        this.lastSidByte=value;
     }
 
 

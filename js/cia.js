@@ -7,6 +7,7 @@ class cia
         this.ciaId=id;
 
         this.icr1=0;
+        this.sdr=0;
         
         this.irqControlReg_dc0d=0;
         this.dataPortA=0;
@@ -277,7 +278,7 @@ class cia
         {
 			//return (this.dataPortA | (~this.datadirregA))&0x3f;
             //var r=Math.floor(Math.random()*0xff)&0xfc;
-			return 0xd0|(this.dataPortA | (~this.datadirregA))&0x3;
+			return 0xc0|(this.dataPortA | (~this.datadirregA))&0x3f;
         }
         else if (addr==0xdc01)
         {
@@ -334,6 +335,10 @@ class cia
             console.log("CIA "+this.ciaId.toString()+"::TOD returning minutes ["+sbcd.toString(16)+"]");
             return sbcd;    
         }*/
+        else if ((addr==0xdc0c)||(addr==0xdd0c))
+        {
+            return this.sdr;
+        }
         else if (addr==0xdc0d)
         {
             var ret = this.icr1;
@@ -409,7 +414,13 @@ class cia
         {
             // DC0C/DD0C - CIA #1/#2 Synchronous Serial I/O Data Buffer
             // 8bit shift register for serial input/output.
-            // do nothing // FIXXX
+            this.sdr=value;
+            this.icr1 |= 8;
+            if ((this.irqControlReg_dc0d & 8) != 0)
+            {
+                this.icr1 |= 0x80;
+                this.cCpu.ciaIrqPending = true;
+            }
         }
         else if ((addr==0xdc0d)||(addr==0xdd0d))
         {
@@ -417,7 +428,7 @@ class cia
 
             if ((value & 0x80) != 0)
             {
-                this.irqControlReg_dc0d |= (value & 0x7f)&0xff;
+                this.irqControlReg_dc0d |= (value & 0x7f);
             }
             else
             {

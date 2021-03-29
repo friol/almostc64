@@ -16,7 +16,15 @@ class c64mmu
         this.ram64k=new Array(65536);
         this.cpustack=new Array(0x100);
 
-        for (var b=0;b<65536;b++) this.ram64k[b]=0;
+        //for (var b=0;b<65536;b++) this.ram64k[b]=0xff;
+        // apparently, C64 RAM has a power-on pattern...
+        var ramPos=0;
+        for (var i = 0; i < 512; i++)
+        {
+            for (var j = 0; j < 64; j++) { this.ram64k[ramPos] = 0x00; ramPos++; }
+            for (var j = 0; j < 64; j++) { this.ram64k[ramPos] = 0xff; ramPos++; }
+        }
+
         for (var b=0;b<0x100;b++) this.cpustack[b]=0;
 
         this.vicChip=vicChip;
@@ -302,7 +310,7 @@ class c64mmu
                 }
                 else if ((addr >= 0xd400) && (addr <= 0xd7ff))
                 {
-                    //theSid.writeRegister(address, value);
+                    this.sidChip.writeRegister(addr, value);
                 }
                 else
                 {

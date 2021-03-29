@@ -55,9 +55,8 @@ function startupFunction()
 			ciaChip1.update(elcyc,cpu);
 			ciaChip2.update(elcyc,cpu);
 			vicChip.updateVic(elcyc,cpu);
-			//apu.step(cpu.totCycles);
 		}
-		/*else if (e.key=="d")
+		else if (e.key=="PageUp")
 		{
 			// step n debugger steps
 			for (var i=0;i<300;i++)
@@ -65,8 +64,9 @@ function startupFunction()
 				var elcyc=cpu.executeOneOpcode();			
 				ciaChip1.update(elcyc,cpu);
 				ciaChip2.update(elcyc,cpu);
+				vicChip.updateVic(elcyc,cpu);
 			}
-		}*/
+		}
 		else if (e.key=="PageDown")
 		{
 			// run to cursor
@@ -188,21 +188,15 @@ function startupFunction()
 					var elcyc=cpu.executeOneOpcode();			
 					ciaChip1.update(elcyc,cpu);
 					ciaChip2.update(elcyc,cpu);
-					vicChip.updateVic(elcyc,cpu);
-
-					/*if (this.pc==2070)
+					var chRasterLine=vicChip.updateVic(elcyc,cpu);
+					if (chRasterLine)
 					{
-						globalEmuStatus=0;
-						break;
-					}*/
+						// draw previous line
+						vicChip.scanlineRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
+					}
 				}			
 
-				//globalListOfOpcodes=new Array();
-				//cpu.debugOpcodes(24,globalListOfOpcodes);
-				//cpu.drawDebugInfo(globalListOfOpcodes,10,30,0);
-
-				//vicChip.simpleRenderer("mainCanvass",520,170,mmu);
-				vicChip.simpleRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
+				//vicChip.simpleRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
 
 				globalOldCyc=cpu.totCycles;
 			}
@@ -231,7 +225,7 @@ function handleFileUpload(fls)
 	{
 		var fname=document.getElementById("prgSelector").value;
 
-		if ((fname.indexOf(".prg")<0)&&(fname.indexOf(".PRG")<0))
+		if ((fname.indexOf(".prg")<0)&&(fname.indexOf(".PRG")<0)&&(fname.indexOf(".")>0))
 		{
 			alert("You can only load .prg files");
 			return;
@@ -256,6 +250,18 @@ function handleFileUpload(fls)
 			glbMMU.writeAddr(0x002D,(varstart & 0xff));
 			glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
 		}		
+
+		// run program
+
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'r'}));},100);
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'r'}));},150);
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'u'}));},200);
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'u'}));},250);
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'n'}));},300);
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'n'}));},350);
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'Enter'}));},400);
+		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'Enter'}));},450);
+	
 	};
 	fileReader.readAsArrayBuffer(fls[0]);	
 }

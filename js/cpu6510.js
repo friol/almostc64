@@ -28,10 +28,9 @@ class cpu6510
         this.instructionTable[0x06]=[2,5,`ASL %d`];
         this.instructionTable[0x08]=[1,3,`PHP`];
         this.instructionTable[0x09]=[2,2,`ORA %d`];
+        this.instructionTable[0x0A]=[1,2,`ASL`];
         this.instructionTable[0x0D]=[3,4,`ORA %d`];
         this.instructionTable[0x0E]=[3,6,`ASL %d`];
-        
-        this.instructionTable[0x0A]=[1,2,`ASL`];
 
         this.instructionTable[0x10]=[2,2,`BPL %d`];
         this.instructionTable[0x11]=[2,5,`ORA (%d),Y`];
@@ -210,7 +209,7 @@ class cpu6510
 
         this.flagsC=0;
         this.flagsZ=0;
-        this.flagsI=1;
+        this.flagsI=0;
         this.flagsD=0;
         this.flagsB=0;
         this.flagsV=0;
@@ -273,12 +272,12 @@ class cpu6510
         // box with register info
 
         ctx.fillStyle="black";
-        ctx.fillText("A: "+this.a.toString(16)+" X: "+this.x.toString(16)+" Y: "+this.y.toString(16), px+600, initialpy);
-        ctx.fillText("SP:"+this.sp.toString(16), px+600, initialpy+fontSpace*1);
-        ctx.fillText("PC:"+this.pc.toString(16), px+600, initialpy+fontSpace*2);
-        ctx.fillText("NVxBDIZC", px+600, initialpy+fontSpace*3);
-        ctx.fillText(this.getFlagsString(), px+600, initialpy+fontSpace*4);
-        ctx.fillText("Total CPU cycles:"+this.totCycles, px+600, initialpy+fontSpace*5);
+        ctx.fillText("A: "+this.a.toString(16)+" X: "+this.x.toString(16)+" Y: "+this.y.toString(16), px+540, initialpy);
+        ctx.fillText("SP:"+this.sp.toString(16), px+540, initialpy+fontSpace*1);
+        ctx.fillText("PC:"+this.pc.toString(16), px+540, initialpy+fontSpace*2);
+        ctx.fillText("NVxBDIZC", px+540, initialpy+fontSpace*3);
+        ctx.fillText(this.getFlagsString(), px+540, initialpy+fontSpace*4);
+        ctx.fillText("Total CPU cycles:"+this.totCycles.toString(16), px+540, initialpy+fontSpace*5);
 
         // moused line
         if ((this.mousePosy>=initialpy)&&(this.mousePosx<512)&&(this.mousePosy<(25*fontSpace)))
@@ -2437,7 +2436,17 @@ class cpu6510
         if ((this.sp>0xff)||(this.sp<0)) alert("Warning: sp out of bounds at "+this.pc.toString(16));
         if ((this.pc>0xffff)||(this.pc<0)) alert("Warning: pc out of bounds at "+this.pc.toString(16));
 
-        //var debugLog=this.pc.toString(16)+" "+this.getFlagsString()+" "+this.a.toString(16)+" "+this.x.toString(16)+" "+this.y.toString(16)+" "+this.sp.toString(16);
+        /*var debugLog=this.pc.toString(16).padStart(4,'0')+" "+this.a.toString(16).padStart(2,'0')+" "+
+        this.x.toString(16).padStart(2,'0')+" "+this.y.toString(16).padStart(2,'0')+" "+this.sp.toString(16).padStart(4,'0')+" "+
+        this.getFlagsString()+" "+
+        this.totCycles.toString(16);
+
+        if ((this.totCycles>=1000)&&(this.totCycles<10000))
+        {
+            //if (this.totCycles==2) debugLog="fce2 00 00 00 00ff 0\n"+debugLog;
+            var ta=document.getElementById("logText");
+            ta.value+=debugLog+"\n";
+        }*/
 
         return elapsedCycles;
     }

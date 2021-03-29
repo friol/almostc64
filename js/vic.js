@@ -9,6 +9,8 @@ class vic
 
         this.rasterTicker=0;
         this.currentRasterLine=0;
+        //this.rasterLines = 263;
+        this.rasterLines = 294;
 
         this.controlreg2_d016=0;
         this.memoryControlReg_d018=0;
@@ -89,18 +91,24 @@ class vic
     {
         this.rasterTicker += clocksElapsed;
 
-        const rasterLines = 263;
         const framesPerSecond = 60;
         const c64freq = 1022727;
+        var changedRasterline=false;
 
         var c64frame = c64freq / framesPerSecond;
-        var clocksPerRasterline = 65;// c64frame / rasterLines;
+        var clocksPerRasterline = 63;
+        if ((this.currentRasterLine>=this.yUpperBorderWidth)&&((this.currentRasterLine%8)==0))
+        {
+            // bad line
+            clocksPerRasterline=23;
+        }
 
         if (this.rasterTicker >= clocksPerRasterline)
         {
             this.rasterTicker -= clocksPerRasterline;
             this.currentRasterLine++;
-            if (this.currentRasterLine >= rasterLines)
+            changedRasterline=true;
+            if (this.currentRasterLine >= this.rasterLines)
             {
                 this.currentRasterLine = 0;
             }
@@ -120,6 +128,8 @@ class vic
                 }
             }
         }
+
+        return changedRasterline;
     }    
 
     setControlReg2(value)
@@ -402,9 +412,165 @@ class vic
         return 0;
     }
 
-    // C64 has a normal text mode (monochrome chars on monochrome bg)
-    // extended color mode (monochrome chars on 4 bg colors)
-    // multicolor mode (4 color chars on bg)
+    //
+    // draw a rasterline of chars
+    //
+
+    drawCharRasterline(cia2,mmu,curScanline)
+    {
+        var extendedColorTextMode=false;
+        if (this.screencontrol1_d011&0x40)
+        {
+            extendedColorTextMode=true;            
+        }
+
+        var multicolorMode=false;
+        if (this.controlreg2_d016&0x10)
+        {
+            multicolorMode=true;
+        }
+
+        var rgbArr=new Array(3*4);
+        for (var col=0;col<4;col++)
+        {
+            rgbArr[(col*3)+0]=this.c64palette[(this.backgroundColor[col]*3)+0];
+            rgbArr[(col*3)+1]=this.c64palette[(this.backgroundColor[col]*3)+1];
+            rgbArr[(col*3)+2]=this.c64palette[(this.backgroundColor[col]*3)+2];
+        }
+
+        var vicbank = cia2.cia2getVICbank();
+        var realvicbank = (3 - vicbank) * 0x4000;
+
+        var memsetup2 = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
+        var vicbase = memsetup2 | realvicbank;
+
+        var mempos = (((this.memoryControlReg_d018 >> 1) & 0x07) * 0x800) | realvicbank;
+
+        var row=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2))/8);
+        var chpx=this.xLeftBorderWidth;
+        var chpy=curScanline;
+        var y=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2)))%8;
+
+        // left border
+        var palnumFgcolor=this.foregroundColor;
+        var fgrcol=this.c64palette[(palnumFgcolor*3)+0];
+        var fggcol=this.c64palette[(palnumFgcolor*3)+1];
+        var fgbcol=this.c64palette[(palnumFgcolor*3)+2];
+
+        for (var xlb=0;xlb<this.xLeftBorderWidth;xlb++)
+        {
+            this.frameBuffer[(0+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=fgrcol;
+            this.frameBuffer[(1+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=fggcol;
+            this.frameBuffer[(2+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=fgbcol;
+            this.frameBuffer[(3+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=255;
+        }
+
+        // inner area
+        for (var xpos=0;xpos<this.charmodeNumxchars;xpos++)
+        {
+            var currentChar = mmu.readAddr((row * 40) + xpos + vicbase);
+    
+            var colorRamAddr=0xd800;
+            var currentCharCol=mmu.readAddr(colorRamAddr+(row*this.charmodeNumxchars)+xpos)&0x0f;
+
+            var rfg=this.c64palette[(currentCharCol*3)+0];
+            var gfg=this.c64palette[(currentCharCol*3)+1];
+            var bfg=this.c64palette[(currentCharCol*3)+2];
+
+            var bgColorNumber=0;
+            if (extendedColorTextMode) 
+            {
+                bgColorNumber=(currentChar>>6)&0x03;
+                currentChar&=0x3f;
+            }
+    
+            var rbg=this.c64palette[(this.backgroundColor[bgColorNumber]*3)+0];
+            var gbg=this.c64palette[(this.backgroundColor[bgColorNumber]*3)+1];
+            var bbg=this.c64palette[(this.backgroundColor[bgColorNumber]*3)+2];
+    
+            var curbyte;
+            if ((mempos == 0x1000) || (mempos == 0x9000))
+            {
+                curbyte = mmu.chargenROM[(currentChar * 8) + y];
+            }
+            else if ((mempos == 0x1800) || (mempos == 0x9800))
+            {
+                curbyte = mmu.chargenROM[0x800+(currentChar * 8) + y];
+            }
+            else
+            {
+                curbyte = mmu.readAddr(mempos + ((currentChar * 8) + y));
+            }
+    
+            if (multicolorMode && ((currentCharCol&0x08)!=0))
+            {
+                // draw as multicolor char
+                for (var x=0;x<8;x+=2)
+                {
+                    var cur2bits = (curbyte >> (6 - x)) & 0x03;
+                    if (cur2bits<0x03)
+                    {
+                        this.frameBuffer[(0+((chpx+x+0)*4))+(((curScanline)*this.xResolutionTotal)*4)]=rgbArr[(cur2bits*3)+0];
+                        this.frameBuffer[(1+((chpx+x+0)*4))+(((curScanline)*this.xResolutionTotal)*4)]=rgbArr[(cur2bits*3)+1];
+                        this.frameBuffer[(2+((chpx+x+0)*4))+(((curScanline)*this.xResolutionTotal)*4)]=rgbArr[(cur2bits*3)+2];
+                        this.frameBuffer[(3+((chpx+x+0)*4))+(((curScanline)*this.xResolutionTotal)*4)]=255;
+    
+                        this.frameBuffer[(0+((chpx+x+1)*4))+(((curScanline)*this.xResolutionTotal)*4)]=rgbArr[(cur2bits*3)+0];
+                        this.frameBuffer[(1+((chpx+x+1)*4))+(((curScanline)*this.xResolutionTotal)*4)]=rgbArr[(cur2bits*3)+1];
+                        this.frameBuffer[(2+((chpx+x+1)*4))+(((curScanline)*this.xResolutionTotal)*4)]=rgbArr[(cur2bits*3)+2];
+                        this.frameBuffer[(3+((chpx+x+1)*4))+(((curScanline)*this.xResolutionTotal)*4)]=255;
+                    }
+                    else
+                    {
+                        this.frameBuffer[0+((chpx+x+0)*4)+((curScanline)*this.xResolutionTotal)*4]=this.c64palette[((currentCharCol&7)*3)+0];
+                        this.frameBuffer[1+((chpx+x+0)*4)+((curScanline)*this.xResolutionTotal)*4]=this.c64palette[((currentCharCol&7)*3)+1];
+                        this.frameBuffer[2+((chpx+x+0)*4)+((curScanline)*this.xResolutionTotal)*4]=this.c64palette[((currentCharCol&7)*3)+2];
+                        this.frameBuffer[3+((chpx+x+0)*4)+((curScanline)*this.xResolutionTotal)*4]=255;
+    
+                        this.frameBuffer[0+((chpx+x+1)*4)+((curScanline)*this.xResolutionTotal)*4]=this.c64palette[((currentCharCol&7)*3)+0];
+                        this.frameBuffer[1+((chpx+x+1)*4)+((curScanline)*this.xResolutionTotal)*4]=this.c64palette[((currentCharCol&7)*3)+1];
+                        this.frameBuffer[2+((chpx+x+1)*4)+((curScanline)*this.xResolutionTotal)*4]=this.c64palette[((currentCharCol&7)*3)+2];
+                        this.frameBuffer[3+((chpx+x+1)*4)+((curScanline)*this.xResolutionTotal)*4]=255;
+                    }
+                }
+            }
+            else
+            {
+                for (var x=0;x<8;x++)
+                {
+                    var curbit=(curbyte>>(7-x))&0x01;
+                    if (curbit)
+                    {
+                        this.frameBuffer[0+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=rfg;
+                        this.frameBuffer[1+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=gfg;
+                        this.frameBuffer[2+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=bfg;
+                        this.frameBuffer[3+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=255;
+                    }
+                    else
+                    {
+                        this.frameBuffer[0+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=rbg;
+                        this.frameBuffer[1+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=gbg;
+                        this.frameBuffer[2+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=bbg;
+                        this.frameBuffer[3+((chpx+x)*4)+((curScanline)*this.xResolutionTotal)*4]=255;
+                    }
+                }
+            }
+
+            chpx+=8;
+        }
+
+        // right border
+        for (var xlb=this.xLeftBorderWidth+320;xlb<this.xResolutionTotal;xlb++)
+        {
+            this.frameBuffer[(0+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=fgrcol;
+            this.frameBuffer[(1+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=fggcol;
+            this.frameBuffer[(2+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=fgbcol;
+            this.frameBuffer[(3+(xlb*4))+(((chpy)*this.xResolutionTotal)*4)]=255;
+        }
+
+    }
+
+    // draw normal char
 
     drawChar(chpx,chpy,currentChar,currentCharCol,ctx,charrom,cia2,mmu,mempos,row,column)
     {
@@ -443,17 +609,14 @@ class vic
             rgbArr[(col*3)+2]=this.c64palette[(this.backgroundColor[col]*3)+2];
         }
 
-        //if (multicolorMode==true)
-        {
-            var vicbank = cia2.cia2getVICbank();
-            var realvicbank = (3 - vicbank) * 0x4000;
+        var vicbank = cia2.cia2getVICbank();
+        var realvicbank = (3 - vicbank) * 0x4000;
 
-            var memsetup2 = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
-            var vicbase = memsetup2 | realvicbank;
+        var memsetup2 = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
+        var vicbase = memsetup2 | realvicbank;
 
-            mempos = (((this.memoryControlReg_d018 >> 1) & 0x07) * 0x800) | realvicbank;
-            currentChar = mmu.readAddr((row * 40) + column + vicbase);
-        }
+        mempos = (((this.memoryControlReg_d018 >> 1) & 0x07) * 0x800) | realvicbank;
+        currentChar = mmu.readAddr((row * 40) + column + vicbase);
 
         for (var y=0;y<8;y++)
         {
@@ -528,13 +691,121 @@ class vic
         }
     }
 
-    drawBitmapScreen(ctx,mmu,cia2)
-    {
-        /*var vicbank = cia2.cia2getVICbank();
-        vicbank = (3 - vicbank) * 0x4000;
-        var baseaddr = ((this.memoryControlReg_d018 >> 3) & 0x01) * 0x2000;
-        baseaddr |= vicbank;*/
+    //
+    // draw a slice of a bitmap screen
+    //
 
+    drawBitmapScreenRasterline(mmu,cia2,scanLine)
+    {
+        var vicBaseAddr = (~cia2.dataPortA & 0x03) << 14;
+        var vicscreenMemoryAddr = (this.memoryControlReg_d018 & 0xf0) << 6;
+        var basecoladdr=vicBaseAddr+vicscreenMemoryAddr;
+
+        var bitmapMemoryAddr = (this.memoryControlReg_d018 & 0x08) << 10;
+        var baseaddr=vicBaseAddr+bitmapMemoryAddr;
+
+        var colorRamPos=0;
+
+        var row=Math.floor((scanLine-Math.floor((this.rasterLines-200)/2))/8);
+        var yshift=Math.floor((scanLine-Math.floor((this.rasterLines-200)/2)))%8;
+
+        basecoladdr+=row*40;
+        baseaddr+=((row*40)*8)+(yshift);
+        colorRamPos=row*40;
+
+        var x=this.xLeftBorderWidth;
+        for (var b=0;b<40;b++)
+        {
+            if ((this.controlreg2_d016 & 0x10) == 0)
+            {
+                // monochrome bitmap graphics
+    
+                var bytecol=mmu.readAddr(basecoladdr);
+                var bytepix=mmu.readAddr(baseaddr);
+
+                var rbg=this.c64palette[((bytecol&0x0f)*3)+0];
+                var gbg=this.c64palette[((bytecol&0x0f)*3)+1];
+                var bbg=this.c64palette[((bytecol&0x0f)*3)+2];
+                var rfg=this.c64palette[((bytecol>>4)*3)+0];
+                var gfg=this.c64palette[((bytecol>>4)*3)+1];
+                var bfg=this.c64palette[((bytecol>>4)*3)+2];
+                
+                for (var px=0;px<8;px++)
+                {
+                    var curbit=(bytepix>>(7-px))&0x01;
+                    if (curbit)
+                    {
+                        this.frameBuffer[0+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=rfg;
+                        this.frameBuffer[1+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=gfg;
+                        this.frameBuffer[2+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=bfg;
+                        this.frameBuffer[3+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=255;
+                    }
+                    else
+                    {
+                        this.frameBuffer[0+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=rbg;
+                        this.frameBuffer[1+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=gbg;
+                        this.frameBuffer[2+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=bbg;
+                        this.frameBuffer[3+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=255;
+                    }
+                }
+
+                baseaddr+=8;
+                basecoladdr++;
+                x+=8;
+            }
+            else
+            {
+                // multicolor bitmap graphics
+
+                var colorArray=new Array(4*3);
+                colorArray[0]=this.c64palette[(this.backgroundColor[0]*3)+0];
+                colorArray[1]=this.c64palette[(this.backgroundColor[0]*3)+1];
+                colorArray[2]=this.c64palette[(this.backgroundColor[0]*3)+2];
+
+                var bytecol=mmu.readAddr(basecoladdr);
+
+                colorArray[3]=this.c64palette[(((bytecol>>4)&0x0f)*3)+0];
+                colorArray[4]=this.c64palette[(((bytecol>>4)&0x0f)*3)+1];
+                colorArray[5]=this.c64palette[(((bytecol>>4)&0x0f)*3)+2];
+                
+                colorArray[6]=this.c64palette[((bytecol&0x0f)*3)+0];
+                colorArray[7]=this.c64palette[((bytecol&0x0f)*3)+1];
+                colorArray[8]=this.c64palette[((bytecol&0x0f)*3)+2];
+
+                const colorRamAddr=0xd800;
+                var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos)&0x0f;
+                colorArray[9]= this.c64palette[(colRamVal*3)+0];
+                colorArray[10]=this.c64palette[(colRamVal*3)+1];
+                colorArray[11]=this.c64palette[(colRamVal*3)+2];
+
+                var bytepix=mmu.readAddr(baseaddr);
+
+                for (var px=0;px<8;px+=2)
+                {
+                    var cur2bits=(bytepix>>(6-px))&0x03;
+
+                    this.frameBuffer[0+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=colorArray[0+(cur2bits*3)];
+                    this.frameBuffer[1+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=colorArray[1+(cur2bits*3)];
+                    this.frameBuffer[2+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=colorArray[2+(cur2bits*3)];
+                    this.frameBuffer[3+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=255;
+
+                    this.frameBuffer[4+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=colorArray[0+(cur2bits*3)];
+                    this.frameBuffer[5+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=colorArray[1+(cur2bits*3)];
+                    this.frameBuffer[6+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=colorArray[2+(cur2bits*3)];
+                    this.frameBuffer[7+((x+px)*4)+((scanLine)*this.xResolutionTotal)*4]=255;
+                }
+
+                baseaddr+=8;
+                basecoladdr++;
+                x+=8;
+            }
+
+            colorRamPos+=1;
+        }
+    }
+
+    drawBitmapScreen(mmu,cia2)
+    {
         var vicBaseAddr = (~cia2.dataPortA & 0x03) << 14;
         var vicscreenMemoryAddr = (this.memoryControlReg_d018 & 0xf0) << 6;
         var basecoladdr=vicBaseAddr+vicscreenMemoryAddr;
@@ -648,8 +919,8 @@ class vic
 
     drawSprites(chpx,chpy,mmu,cia2)
     {
-        chpx-=25;
-        chpy-=50;
+        chpx-=24;
+        chpy-=46;
 
         for (var spritenum = 7; spritenum >=0; spritenum--)
         {
@@ -903,7 +1174,7 @@ class vic
             else
             {
                 // bitmap mood
-                this.drawBitmapScreen(ctx,mmu,cia2);
+                this.drawBitmapScreen(mmu,cia2);
             }
 
             //
@@ -946,4 +1217,89 @@ class vic
         this.canvasRenderer.getContext('2d').putImageData(this.imgData, 0, 0);
         ctx.drawImage(this.canvasRenderer, px,py, this.xResolutionTotal, this.yResolutionTotal);
     }
+
+    //
+    // scanline renderer
+    //
+
+    scanlineRenderer(canvasName,px,py,mmu,cia2)
+    {
+        var curScanline=this.currentRasterLine;
+        if (curScanline==0) curScanline=this.rasterLines;
+
+        var canvas = document.getElementById(canvasName);
+        var ctx = canvas.getContext("2d");
+
+        var palnumFgcolor=this.foregroundColor;
+        var fgrcol=this.c64palette[(palnumFgcolor*3)+0];
+        var fggcol=this.c64palette[(palnumFgcolor*3)+1];
+        var fgbcol=this.c64palette[(palnumFgcolor*3)+2];
+
+        if ((this.screencontrol1_d011 & 0x10)!=0) // screen not blanked
+        {
+            if ((this.screencontrol1_d011&0x20)==0)
+            {
+                // are we in a border scanline?
+                if ( (curScanline<Math.floor((this.rasterLines-200)/2)) || (curScanline>=(Math.floor((this.rasterLines-200)/2)+200)) )
+                {
+                    for (var p=(this.xResolutionTotal*curScanline*4);p<(this.xResolutionTotal*(curScanline+1)*4);p+=4)            
+                    {
+                        this.frameBuffer[p+0]=fgrcol;
+                        this.frameBuffer[p+1]=fggcol;
+                        this.frameBuffer[p+2]=fgbcol;
+                        this.frameBuffer[p+3]=255;
+                    }
+                }
+                else
+                {
+                    // draw inner area
+                    this.drawCharRasterline(cia2,mmu,curScanline);
+                }
+            }
+            else
+            {
+                // bitmap mood
+                if ( (curScanline>=Math.floor((this.rasterLines-200)/2)) && (curScanline<(Math.floor((this.rasterLines-200)/2)+200)) )
+                {
+                    this.drawBitmapScreenRasterline(mmu,cia2,curScanline);
+                }
+            }
+        }
+        else
+        {
+            // screen blanked
+            for (var p=(this.xResolutionTotal*curScanline*4);p<(this.xResolutionTotal*(curScanline+1)*4);p+=4)            
+            {
+                this.frameBuffer[p+0]=fgrcol;
+                this.frameBuffer[p+1]=fggcol;
+                this.frameBuffer[p+2]=fgbcol;
+                this.frameBuffer[p+3]=255;
+            }
+        }
+
+        if (curScanline==this.rasterLines)
+        {
+            //
+            // sprites
+            //
+
+            var chpx=px+this.xLeftBorderWidth;
+            var chpy=py+this.yUpperBorderWidth;
+            this.drawSprites(chpx,chpy,mmu,cia2);
+
+            // spit it all out
+            if (this.imgData==undefined) this.imgData = ctx.getImageData(0, 0, this.xResolutionTotal, this.yResolutionTotal);
+            this.imgData.data.set(this.frameBuffer);
+
+            if (this.canvasRenderer==undefined)
+            {
+                this.canvasRenderer = document.createElement('canvas');
+                this.canvasRenderer.width = this.imgData.width;
+                this.canvasRenderer.height = this.imgData.height;
+            }
+            this.canvasRenderer.getContext('2d').putImageData(this.imgData, 0, 0);
+            ctx.drawImage(this.canvasRenderer, px,py, this.xResolutionTotal, this.yResolutionTotal);
+        }
+    }
+
 }
