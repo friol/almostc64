@@ -24,6 +24,7 @@ function startupFunction()
 	var cpu=new cpu6510(glbMMU);
 	ciaChip1.linkCpu(cpu);
 	ciaChip2.linkCpu(cpu);
+	vicChip.setCPU(cpu);
 
 	var rad = document.joyform.joySelection;
 	var prev = null;

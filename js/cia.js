@@ -8,9 +8,12 @@ class cia
 
         this.icr1=0;
         this.sdr=0;
+
+        this.ciatod=new tod();
         
         this.irqControlReg_dc0d=0;
         this.dataPortA=0;
+        this.ciaportB=0;
 
         this.timerAlatch=0;
         this.timerA_dc04=0;
@@ -94,7 +97,8 @@ class cia
 
     buildKeypressByte()
     {
-        var retByte = 0xff;
+        var retByte = (~this.datadirregB)&0xff; 
+        var tst = ((this.dataPortA | (~this.datadirregA)) )&0xff;
 
         for (var curk=0;curk<this.keyboardKeyList.length;curk++)
         {
@@ -108,7 +112,7 @@ class cia
                     var keycol = pos % 8;
                     var keyrow = Math.floor(pos / 8);
 
-                    if ((this.dataPortA & (1<<(7-keyrow))) == 0)
+                    if ((tst & (1<<(7-keyrow))) == 0)
                     {
                         retByte&=(~(1<<(7-keycol)))&0xff;
                     }
@@ -145,13 +149,36 @@ class cia
             }
         }
 
-        return retByte;
+        //return retByte;
+        return (retByte|(this.ciaportB&this.datadirregB))&0xff;
+        //return (byte)((ret | (prb & ddrb)) & Joystick1);
     }
 
     buildCia1PortAByte()
     {
-        // joystick 2
-        var retByte = 0xff;
+        var retByte = ((this.dataPortA | (~this.datadirregA)))&0xff;
+        var tst = (this.ciaportB|(~this.datadirregB))&0xff; 
+
+        for (var curk=0;curk<this.keyboardKeyList.length;curk++)
+        {
+            var k = this.keyboardKeyList[curk];
+            var pos=0;
+
+            for (var i=0;i<this.keyDefArray.length;i++)
+            {
+                if (k == this.keyDefArray[i])
+                {
+                    var keycol = pos % 8;
+                    var keyrow = Math.floor(pos / 8);
+
+                    if ((tst & (1<<(7-keycol))) == 0)
+                    {
+                        retByte&=(~(1<<(7-keyrow)))&0xff;
+                    }
+                }
+                pos++;
+            }
+        }        
 
         if (this.curJoystick==2)
         {
@@ -185,6 +212,8 @@ class cia
 
     update(elapsedCycles,theCpu)
     {
+        this.ciatod.update(elapsedCycles);
+
         if (this.timerAisRunning)
         {
             var timerLow = this.timerA_dc04;
@@ -285,6 +314,10 @@ class cia
             // cia#1 keybmatrix/joy port A
             return this.buildKeypressByte();
         }
+        else if (addr==0xdd01)
+        {
+            return (this.ciaportB | (~this.datadirregB))&0xff;
+        }
         else if ((addr==0xdc02)||(addr==0xdd02))
         {
             return this.datadirregA;
@@ -309,38 +342,42 @@ class cia
         {
             return this.timerB_dc07;
         }
-        /*else if (addr==0xdc08)
+        else if ((addr==0xdc08)||(addr==0xdd08))
         {
             // $DC08 - Time Of Day, Tenths Of Seconds
-            var d = new Date();
-            var tos=Math.floor(d.getMilliseconds() / 100);
-            console.log("CIA "+this.ciaId.toString()+"::TOD returning tenths of seconds ["+tos+"]");
-            return tos;    
+            //console.log("CIA "+this.ciaId.toString()+"::TOD returning tenths of seconds ["+this.ciatod.tod10th_bcd+"]");
+            this.ciatod.tod_halt=false;
+            return this.ciatod.tod10th_bcd;    
         }
-        else if (addr==0xdc09)
+        else if ((addr==0xdc09)||(addr==0xdd09))
         {
             // $DC09 - Time Of Day, Seconds
-            var d=new Date();
-            var s=d.getSeconds();
-            var sbcd=parseInt(s.toString(10),16);
-            console.log("CIA "+this.ciaId.toString()+"::TOD returning seconds ["+sbcd.toString(16)+"]");
-            return sbcd;    
+            var sbcd=parseInt(this.ciatod.todsec_bcd.toString(10),16);
+            //console.log("CIA "+this.ciaId.toString()+"::TOD returning seconds ["+sbcd.toString(16)+"]");
+            return this.ciatod.todsec_bcd;    
         }
-        else if (addr==0xdc0a)
+        else if ((addr==0xdc0a)||(addr==0xdd0a))
         {
             // $DC0A - Time Of Day, Minutes
-            var d=new Date();
-            var s=d.getMinutes();
-            var sbcd=parseInt(s.toString(10),16);
-            console.log("CIA "+this.ciaId.toString()+"::TOD returning minutes ["+sbcd.toString(16)+"]");
-            return sbcd;    
-        }*/
+            var sbcd=parseInt(this.ciatod.todmin_bcd.toString(10),16);
+            //console.log("CIA "+this.ciaId.toString()+"::TOD returning minutes ["+sbcd.toString(16)+"]");
+            return this.ciatod.todmin_bcd;    
+        }
+        else if ((addr==0xdc0b)||(addr==0xdd0b))
+        {
+            // $DC0B - Time Of Day, Hours
+            this.ciatod.tod_halt=true;
+            var sbcd=parseInt(this.ciatod.todhour_bcd.toString(10),16);
+            //console.log("CIA "+this.ciaId.toString()+"::TOD returning hours ["+sbcd.toString(16)+"]");
+            return this.ciatod.todhour_bcd;    
+        }
         else if ((addr==0xdc0c)||(addr==0xdd0c))
         {
             return this.sdr;
         }
         else if (addr==0xdc0d)
         {
+            // cia1 interrupt control reg
             var ret = this.icr1;
             this.icr1 = 0;
             this.cCpu.ciaIrqPending=false;
@@ -379,6 +416,10 @@ class cia
             this.setDataPortA(value);
             //if ((this.ciaId==2)&&(addr==0xdd00)) console.log("CIA2 set dataportA DD00 "+value.toString(16));
         }
+        else if ((addr==0xdc01)||(addr==0xdd01))
+        {
+            this.ciaportB=value;
+        }
         else if ((addr==0xdc02)||(addr==0xdd02))
         {
             this.datadirregA=value;
@@ -398,6 +439,11 @@ class cia
         {
             this.timerA_dc05=value;
             this.timerAlatch|=(value<<8)&0xff00;
+            if ((this.timerACtrl_dc0e&1)==0)
+            {
+                this.timerA_dc04=this.timerAlatch&0xff;
+                this.timerA_dc05=(this.timerAlatch>>8)&0xff;
+            }
             //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to timer A latch high byte dc05 - latch value is "+this.timerAlatch.toString(16));
         }
         else if ((addr==0xdc06)||(addr==0xdd06))
@@ -409,6 +455,55 @@ class cia
         {
             this.timerB_dc07=value;
             this.timerBlatch|=(value<<8)&0xff00;
+            if ((this.controlReg2&1)==0)
+            {
+                this.timerB_dc06=this.timerBlatch&0xff;
+                this.timerB_dc07=(this.timerBlatch>>8)&0xff;
+            }
+        }
+        else if ((addr==0xdc08)||(addr==0xdd08))
+        {
+            if ((this.controlReg2&0x80) != 0)
+            {
+                this.ciatod.alarm10th_bcd=(value&0x0f);
+            }
+            else
+            {
+                this.ciatod.tod10th_bcd=(value&0x0f);
+            }
+        }
+        else if ((addr==0xdc09)||(addr==0xdd09))
+        {
+            if ((this.controlReg2&0x80) != 0)
+            {
+                this.ciatod.alarmsec_bcd=(value&0x7f);
+            }
+            else
+            {
+                this.ciatod.todsec_bcd=(value&0x7f);
+            }
+        }
+        else if ((addr==0xdc0a)||(addr==0xdd0a))
+        {
+            if ((this.controlReg2&0x80) != 0)
+            {
+                this.ciatod.alarmmin_bcd=(value&0x7f);
+            }
+            else
+            {
+                this.ciatod.todmin_bcd=(value&0x7f);
+            }
+        }
+        else if ((addr==0xdc0b)||(addr==0xdd0b))
+        {
+            if ((this.controlReg2&0x80) != 0)
+            {
+                this.ciatod.alarmhour_bcd=(value&0x9f);
+            }
+            else
+            {
+                this.ciatod.todhour_bcd=(value&0x9f);
+            }
         }
         else if ((addr==0xdc0c)||(addr==0xdd0c))
         {

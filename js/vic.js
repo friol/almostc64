@@ -87,6 +87,11 @@ class vic
         this.lightPenLatchY_d014=0;
     }
 
+    setCPU(theCpu)
+    {
+        this.theCpu=theCpu;
+    }
+
     updateVic(clocksElapsed,theCpu)
     {
         this.rasterTicker += clocksElapsed;
@@ -211,7 +216,7 @@ class vic
             //Bit #2: 0 = Acknowledge sprite-sprite collision interrupt.
             //Bit #3: 0 = Acknowledge light pen interrupt.
 
-            this.irqFlagRegister_d019 = (this.irqFlagRegister_d019 & (~value & 0x0f));
+            this.irqFlagRegister_d019 = (this.irqFlagRegister_d019 & ((~value) & 0x0f));
             if ((this.irqFlagRegister_d019 & this.irqEnable_d01a) != 0)
             {
                 this.irqFlagRegister_d019 |= 0x80;
@@ -219,23 +224,25 @@ class vic
             else
             {
                 // irq acknowledged
-                //cpu6510 theCpu = cpu6510.getInstance();
-                //theCpu.vicirqPending = false;
+                this.theCpu.vicIrqPending=false;
             }
         }        
         else if (addr==0xd01a)
         {
             this.irqEnable_d01a=value&0x0f;
-            /*if ((intstatusreg & irqControl_d01a) != 0)
-            {
-                intstatusreg |= 0x80;
-                theCpu.vicirqPending = true;
+
+            //irq_mask = (byte)(abyte & 0x0f);
+            if ((this.irqFlagRegister_d019 & this.irqEnable_d01a) != 0)
+            {	
+                // Trigger interrupt if pending and now allowed
+                this.irqFlagRegister_d019 |= 0x80;
+                this.theCpu.vicIrqPending=true;
             }
             else
             {
-                intstatusreg &= 0x7f;
-                theCpu.vicirqPending=false;
-            }*/            
+                this.irqFlagRegister_d019 &= 0x7f;
+                this.theCpu.vicIrqPending=false;
+            }
         }
         else if (addr==0xd01b)
         {
@@ -318,9 +325,11 @@ class vic
         }
         else if (addr==0xd011)
         {
-            var ret = (this.screencontrol1_d011 & 0x7f);
-            if (this.currentRasterLine >= 256) ret |= 0x80;
-            return ret;
+            /*var ret = (this.screencontrol1_d011 & 0x7f);
+            if (this.currentRasterLine >= 256) ret |= 0x80;*/
+            //return (byte)((ctrl1 & 0x7f) | ((raster_y & 0x100) >> 1));
+
+            return ((this.screencontrol1_d011 & 0x7f)|((this.currentRasterLine&0x100)>>1))&0xff;
         }
         else if (addr == 0xD012)
         {
@@ -373,7 +382,7 @@ class vic
         }        
         else if (addr==0xd020)
         {
-            return this.foregroundColor;
+            return (this.foregroundColor);
         }
         else if (addr==0xd021)
         {
@@ -395,13 +404,17 @@ class vic
         {
             return this.spriteMulticolor0_d025;
         }
+        else if (addr==0xd026)
+        {
+            return this.spriteMulticolor1_d026;
+        }
         else if ((addr>=0xd027)&&(addr<=0xd02e))
         {
             return this.spriteColors_d027_d02e[addr-0xd027];
         }
-        else if (addr==0xd030)
+        else if ((addr>=0xd02f)&&(addr<=0xd03f))
         {
-            // unused (on c64)
+            // unused
             return 0xff;
         }   
         else
