@@ -66,18 +66,6 @@ class cia
         this.cCpu=c;
     }
 
-    setIrqControlReg(value)
-    {
-        //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to Irq Control Reg");
-        this.irqControlReg_dc0d=value;
-    }
-
-    setDataPortA(value)
-    {
-        //console.log("CIA "+this.ciaId.toString()+"::write ["+value.toString(16)+"] to Data Port A");
-        this.dataPortA=value;
-    }
-
     keyPress(kv)
     {
         if (this.keyboardKeyList.indexOf(kv)<0)
@@ -226,7 +214,7 @@ class cia
                 this.icr1 |= 0x01;
                 if ((this.irqControlReg_dc0d & 0x01) == 0x01)
                 {
-                    // trigger maskable irq
+                    // trigger irq
                     if (this.ciaId==1) theCpu.ciaIrqPending=true;
                     if (this.ciaId==2) theCpu.nmiPending=true;
                     this.icr1 |= 0x80;
@@ -241,6 +229,7 @@ class cia
                 else
                 {
                     this.timerAisRunning = false;
+                    this.timerACtrl_dc0e&=0xfe; // FIXXX?
                 }
             }
             else
@@ -264,9 +253,8 @@ class cia
                 this.icr1 |= 0x02;
                 if ((this.irqControlReg_dc0d & 0x02) == 0x02)
                 {
-                    //theLogger.logWrite("cia#2 timer B firing");
-                    // trigger maskable irq
-                    theCpu.nmiPending = true;
+                    if (this.ciaId==1) theCpu.ciaIrqPending=true;
+                    if (this.ciaId==2) theCpu.nmiPending=true;
                     this.icr1 |= 0x80;
                 }
 
@@ -279,6 +267,7 @@ class cia
                 else
                 {
                     this.timerBisRunning = false;
+                    this.timerBCtrl_dc0f&=0xfe; // FIXXX?
                 }
             }
             else
@@ -413,7 +402,7 @@ class cia
 
         if ((addr==0xdc00)||(addr==0xdd00))
         {
-            this.setDataPortA(value);
+            this.dataPortA=value;
             //if ((this.ciaId==2)&&(addr==0xdd00)) console.log("CIA2 set dataportA DD00 "+value.toString(16));
         }
         else if ((addr==0xdc01)||(addr==0xdd01))
@@ -511,11 +500,11 @@ class cia
             // 8bit shift register for serial input/output.
             this.sdr=value;
             this.icr1 |= 8;
-            if ((this.irqControlReg_dc0d & 8) != 0)
+            /*if ((this.irqControlReg_dc0d & 8) != 0)
             {
                 this.icr1 |= 0x80;
                 this.cCpu.ciaIrqPending = true;
-            }
+            }*/
         }
         else if ((addr==0xdc0d)||(addr==0xdd0d))
         {
@@ -533,12 +522,13 @@ class cia
             if ((this.icr1 & this.irqControlReg_dc0d & 0x1f) != 0)
             {
                 this.icr1 |= 0x80;
-                this.cCpu.ciaIrqPending = true;
+                if (addr==0xdc0d) this.cCpu.ciaIrqPending = true;
+                else if (addr==0xdd0d) this.cCpu.nmiPending=true;
             }
         }
         else if ((addr==0xdc0e)||(addr==0xdd0e))
         {
-            this.timerACtrl_dc0e=value;            
+            this.timerACtrl_dc0e=value&0xef;            
             
             if ((this.timerACtrl_dc0e & 0x01) == 0x01)
             {
@@ -551,7 +541,7 @@ class cia
         }
         else if ((addr==0xdc0f)||(addr==0xdd0f))
         {
-            this.controlReg2=value;
+            this.controlReg2=value&0xef;
 
             if ((this.controlReg2 & 0x01) == 0x01)
             {

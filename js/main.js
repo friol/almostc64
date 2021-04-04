@@ -38,6 +38,11 @@ function startupFunction()
 
 	globalEmuStatus=1;
 
+	document.getElementById("mainCanvass").addEventListener('click', event => 
+	{
+		if (!sidChip.audioInitialized) sidChip.startMix();
+	});	
+
 	document.getElementById("mainCanvass").addEventListener("mousemove",function(e)
 	{
 		var relativeX = e.clientX - document.getElementById("mainCanvass").offsetLeft;
@@ -56,6 +61,7 @@ function startupFunction()
 			ciaChip1.update(elcyc,cpu);
 			ciaChip2.update(elcyc,cpu);
 			vicChip.updateVic(elcyc,cpu);
+			sidChip.step(cpu.totCycles);
 		}
 		else if (e.key=="PageUp")
 		{
@@ -66,6 +72,7 @@ function startupFunction()
 				ciaChip1.update(elcyc,cpu);
 				ciaChip2.update(elcyc,cpu);
 				vicChip.updateVic(elcyc,cpu);
+				sidChip.step(cpu.totCycles);
 			}
 		}
 		else if (e.key=="PageDown")
@@ -82,6 +89,7 @@ function startupFunction()
 					ciaChip1.update(elcyc,cpu);
 					ciaChip2.update(elcyc,cpu);
 					vicChip.updateVic(elcyc,cpu);
+					sidChip.step(cpu.totCycles);
 							
 					times+=1;
 					updateTimer+=1;
@@ -189,6 +197,7 @@ function startupFunction()
 					var elcyc=cpu.executeOneOpcode();			
 					ciaChip1.update(elcyc,cpu);
 					ciaChip2.update(elcyc,cpu);
+					sidChip.step(cpu.totCycles);
 					var chRasterLine=vicChip.updateVic(elcyc,cpu);
 					if (chRasterLine)
 					{
@@ -212,7 +221,7 @@ function startupFunction()
 		var fpeez=(1000/frameTime).toFixed(1);
 		fpsOut.innerHTML = fpeez + " fps";
 
-		window.setTimeout(updateScreen, 13);
+		window.setTimeout(updateScreen,14);
 	}
 
 	updateScreen();

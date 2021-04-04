@@ -27,6 +27,8 @@ class c64mmu
 
         for (var b=0;b<0x100;b++) this.cpustack[b]=0;
 
+        this.lastVICbyte=0;
+
         this.vicChip=vicChip;
         this.ciaChip1=ciaChip1;
         this.ciaChip2=ciaChip2;
@@ -135,25 +137,7 @@ class c64mmu
     {
         addr&=0xffff;
 
-        if ((addr >= 0xa000) && (addr <= 0xbfff))
-        {
-            if (!this.basic_in)
-            {
-                // fallthrough ram
-                return this.ram64k[addr];
-            }
-            else
-            {
-                // basic rom
-                return this.basicROM[addr - 0xa000];
-            }
-        }        
-        else if ((addr >= 0xc000) && (addr <= 0xcfff))
-        {
-            // upper ram
-            return this.ram64k[addr];
-        }
-        else if (addr==0x0000)
+        if (addr==0x0000)
         {
             return this.dataDirReg;
         }
@@ -178,6 +162,24 @@ class c64mmu
             // $8000-$9FFF, optional cartridge rom or RAM            
             return this.ram64k[addr];
         }
+        else if ((addr >= 0xa000) && (addr <= 0xbfff))
+        {
+            if (!this.basic_in)
+            {
+                // fallthrough ram
+                return this.ram64k[addr];
+            }
+            else
+            {
+                // basic rom
+                return this.basicROM[addr - 0xa000];
+            }
+        }        
+        else if ((addr >= 0xc000) && (addr <= 0xcfff))
+        {
+            // upper ram
+            return this.ram64k[addr];
+        }        
         else if ((addr >= 0xd000) && (addr <= 0xdfff))
         {
             if (!this.io_in)
@@ -212,11 +214,12 @@ class c64mmu
                 else if ((addr>=0xd800)&&(addr<=0xdbff))
                 {
                     // color RAM
-                    return this.ram64k[addr];
+                    return ((this.ram64k[addr]&0x0f)|(this.lastVICbyte&0xf0));
                 }                
                 else
                 {
-                    return this.vicChip.readVICRegister(addr);
+                    this.lastVICbyte=this.vicChip.readVICRegister(addr);
+                    return this.lastVICbyte;
                 }
             }
         }        
@@ -255,6 +258,7 @@ class c64mmu
         {
             // Processor port data direction register
             this.dataDirReg=value;
+            this.ram64k[0]=this.lastVICbyte;
             //console.log("Wrote ["+value.toString(16)+"] to dataDirReg 0000");
             this.setProcessorPortConfig();
         }
@@ -262,6 +266,7 @@ class c64mmu
         {
             // processor port
             this.processorPortReg=value;
+            this.ram64k[1]=this.lastVICbyte;
             //console.log("Wrote ["+value.toString(16)+"] to processor port 0001");
             this.setProcessorPortConfig();
         }
@@ -298,7 +303,7 @@ class c64mmu
                 if ((addr>=0xd800)&&(addr<=0xdbff))
                 {
                     // color RAM
-                    this.ram64k[addr]=value;
+                    this.ram64k[addr]=value&0x0f;
                 }
                 else if ((addr >= 0xdc00) && (addr <= 0xdcff))
                 {
