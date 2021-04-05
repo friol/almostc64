@@ -8,5 +8,6 @@ Some screenshots:
 
 <img src="https://raw.githubusercontent.com/friol/almostc64/master/c64_cracked.png" width="320" height="240"> <img src="https://raw.githubusercontent.com/friol/almostc64/master/piersoft.png" width="320" height="240">
 <img src="https://raw.githubusercontent.com/friol/almostc64/master/pyra_cracktro.png" width="320" height="240"> <img src="https://raw.githubusercontent.com/friol/almostc64/master/twins_cracktro.png" width="320" height="240">
+<img src="https://raw.githubusercontent.com/friol/almostc64/master/impossible_mission.png" width="320" height="240"> <img src="https://raw.githubusercontent.com/friol/almostc64/master/rom.png" width="320" height="240">
 
 The online, up-to-date version is here: http://dantonag.it/almostC64/index.html
