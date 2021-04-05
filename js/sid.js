@@ -12,6 +12,12 @@ class sidVoice
         this.decay=0;
         this.sustain=0;
         this.release=0;
+
+        this.attackDurationSamples=0;
+        this.decayDurationSamples=0;
+        this.releaseDurationSamples=0;
+        this.adsrPos=0;
+        this.adsrPhase=0; // 0: sound stopped, 1: attack-decay-sustain, 2: release
     }
 }
 

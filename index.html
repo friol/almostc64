@@ -5,7 +5,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>AlmostC64 v0.7</title>
+    <title>AlmostC64 v0.8</title>
 
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/utils.js"></script>
@@ -21,7 +21,7 @@
 </head>
 <body>
 
-<img src="img/almost64logo.png" /> - Commodore64 emulator v0.7 - <span id="fpsSpan">-</span><br/>
+<img src="img/almost64logo.png" /> - Commodore64 emulator v0.8 - <span id="fpsSpan">-</span><br/>
 
 <canvas id="mainCanvass" width="402" height="292" style="float:left"></canvas>
 <!--<canvas id="mainCanvass" width="800" height="600" style="float:left"></canvas>-->
@@ -29,7 +29,7 @@
 <br/>
 <br/>
 
-<input type="file" id="prgSelector" onchange="handleFileUpload(this.files)" style="float:left;clear:both;margin-top:10px">
+<input type="file" id="prgSelector" onchange="handleFileUpload(this.files)" style="float:left;clear:both;margin-top:10px" disabled>
 
 <form name="joyform" style="float:left;margin-top:10px">
 <div>
@@ -39,6 +39,31 @@
     <label for="joy2">Joy2</label>
 </div>
 </form>
+
+<span style="float:left;clear:both;margin-top:10px">Run a cracktro: 
+<select name="cracktros" id="cracktrosSelector" onchange="loadCracktro(this)" disabled>
+    <option value="run">--</option>
+    <option value="fc-01.prg">fc-01.prg</option>
+    <option value="fc-02.prg">fc-02.prg</option>
+    <option value="flt-08.prg">flt-08.prg</option>
+    <option value="flt-10.prg">flt-10.prg</option>
+    <option value="gazunda-01.prg">gazunda-01.prg</option>
+    <option value="gigaline-01.prg">gigaline-01.prg</option>
+    <option value="nirvana-03.prg">nirvana-03.prg</option>
+    <option value="noice-02.prg">noice-02.prg</option>
+    <option value="pier-04.prg">pier-04.prg</option>
+    <option value="publichange-02.prg">publichange-02.prg</option>
+    <option value="pyra-01.prg">pyra-01.prg</option>
+    <option value="pyra-03.prg">pyra-03.prg</option>
+    <option value="ssw-02.prg">ssw-02.prg</option>
+    <option value="s_w_a_t-03.prg">s_w_a_t-03.prg</option>
+    <option value="talent-04.prg">talent-04.prg</option>
+    <option value="tgc-01.prg">tgc-01.prg</option>
+    <option value="twins-02.prg">twins-02.prg</option>
+    <option value="twins-10.prg">twins-10.prg</option>
+    <option value="tz-04.prg">tz-04.prg</option>
+</select>
+</span>
 
 <!--<textarea id="logText" cols="80" rows="5" style="float:left;clear:both;margin-top:10px"></textarea>-->
 
