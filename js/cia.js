@@ -280,7 +280,7 @@ class cia
 
     cia2getVICbank()
     {
-        return 3-((~(this.dataPortA | (~this.datadirregA)) & 0x03)&0xffff);
+        return 3-(~(this.dataPortA | (~this.datadirregA)) & 0x03);
     }
 
     readCIARegister(addr)

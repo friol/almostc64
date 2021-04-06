@@ -229,7 +229,6 @@ function startupFunction()
 		ctx.fillText("Welcome to the almostC64 emulator. To start, click on the \"play\" button.", 10, 20);
 		ctx.fillText("You can load a .prg file and run it or start a cracktro from the selector below.", 10, 32);
 		ctx.fillText("You can choose which joystick to use (joystick is controlled with cursor keys and CTRL).", 10, 44);
-
 	}
 
 	function updateScreen()
@@ -242,7 +241,7 @@ function startupFunction()
 				cpu.debugOpcodes(24,globalListOfOpcodes);
 				
 				cpu.drawDebugInfo(globalListOfOpcodes,10,30,0);
-				vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2);
+				//vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2);
 			}
 			else if (globalEmuStatus==1)
 			{

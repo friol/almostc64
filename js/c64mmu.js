@@ -133,9 +133,25 @@ class c64mmu
 
     //
 
-    readAddr(addr)
+    readAddr(addr,fromVIC=false)
     {
         addr&=0xffff;
+
+        if (fromVIC)
+        {
+            if ((addr>=0x1000)&&(addr<0x2000))
+            {
+                return this.chargenROM[addr-0x1000];
+            }
+            else if ((addr>=0x9000)&&(addr<0xa000))
+            {
+                return this.chargenROM[addr-0x9000];
+            }
+            else
+            {
+                return this.ram64k[addr];
+            }
+        }
 
         if (addr==0x0000)
         {

@@ -100,9 +100,9 @@ class vic
         const c64freq = 1022727;
         var changedRasterline=false;
 
-        var c64frame = c64freq / framesPerSecond;
+        //var c64frame = c64freq / framesPerSecond;
         var clocksPerRasterline = 63;
-        if ((this.currentRasterLine>=this.yUpperBorderWidth)&&((this.currentRasterLine%8)==0))
+        if ((this.currentRasterLine>=this.yUpperBorderWidth)&&((this.currentRasterLine%8)==0)&&(this.currentRasterLine<(this.yUpperBorderWidth+200)))
         {
             // bad line
             clocksPerRasterline=23;
@@ -296,10 +296,10 @@ class vic
         {
             this.spriteColors_d027_d02e[addr-0xd027]=value;
         }
-        else if (addr==0xd030)
+        else if ((addr>=0xd02f)&&(addr<=0xd03f))
         {
-            // unused reg on C64
-        }
+            // unused
+        }   
         else
         {
             console.log("VIC::write ["+value.toString(16)+"] to unhandled reg "+addr.toString(16));
@@ -334,6 +334,14 @@ class vic
         else if (addr == 0xD012)
         {
             return (this.currentRasterLine & 0xff);
+        }
+        else if (addr == 0xD013)
+        {
+            return 0x00; // FIXXX light pen x
+        }
+        else if (addr == 0xD014)
+        {
+            return 0x00; // FIXXX light pen y
         }
         else if (addr==0xd015)
         {
@@ -481,10 +489,10 @@ class vic
         // inner area
         for (var xpos=0;xpos<this.charmodeNumxchars;xpos++)
         {
-            var currentChar = mmu.readAddr((row * 40) + xpos + vicbase);
+            var currentChar = mmu.readAddr((row * 40) + xpos + vicbase,true);
     
             var colorRamAddr=0xd800;
-            var currentCharCol=mmu.readAddr(colorRamAddr+(row*this.charmodeNumxchars)+xpos)&0x0f;
+            var currentCharCol=mmu.readAddr(colorRamAddr+(row*this.charmodeNumxchars)+xpos,true)&0x0f;
 
             var rfg=this.c64palette[(currentCharCol*3)+0];
             var gfg=this.c64palette[(currentCharCol*3)+1];
@@ -502,7 +510,7 @@ class vic
             var bbg=this.c64palette[(this.backgroundColor[bgColorNumber]*3)+2];
     
             var curbyte;
-            if ((mempos == 0x1000) || (mempos == 0x9000))
+            /*if ((mempos == 0x1000) || (mempos == 0x9000))
             {
                 curbyte = mmu.chargenROM[(currentChar * 8) + y];
             }
@@ -510,9 +518,9 @@ class vic
             {
                 curbyte = mmu.chargenROM[0x800+(currentChar * 8) + y];
             }
-            else
+            else*/
             {
-                curbyte = mmu.readAddr(mempos + ((currentChar * 8) + y));
+                curbyte = mmu.readAddr(mempos + ((currentChar * 8) + y),true);
             }
     
             if (multicolorMode && ((currentCharCol&0x08)!=0))
@@ -584,7 +592,7 @@ class vic
     }
 
     // draw normal char
-
+/*
     drawChar(chpx,chpy,currentChar,currentCharCol,ctx,charrom,cia2,mmu,mempos,row,column)
     {
         var rfg=this.c64palette[(currentCharCol*3)+0];
@@ -703,6 +711,7 @@ class vic
             }
         }
     }
+*/
 
     //
     // draw a slice of a bitmap screen
@@ -733,8 +742,8 @@ class vic
             {
                 // monochrome bitmap graphics
     
-                var bytecol=mmu.readAddr(basecoladdr);
-                var bytepix=mmu.readAddr(baseaddr);
+                var bytecol=mmu.readAddr(basecoladdr,true);
+                var bytepix=mmu.readAddr(baseaddr,true);
 
                 var rbg=this.c64palette[((bytecol&0x0f)*3)+0];
                 var gbg=this.c64palette[((bytecol&0x0f)*3)+1];
@@ -775,7 +784,7 @@ class vic
                 colorArray[1]=this.c64palette[(this.backgroundColor[0]*3)+1];
                 colorArray[2]=this.c64palette[(this.backgroundColor[0]*3)+2];
 
-                var bytecol=mmu.readAddr(basecoladdr);
+                var bytecol=mmu.readAddr(basecoladdr,true);
 
                 colorArray[3]=this.c64palette[(((bytecol>>4)&0x0f)*3)+0];
                 colorArray[4]=this.c64palette[(((bytecol>>4)&0x0f)*3)+1];
@@ -786,12 +795,12 @@ class vic
                 colorArray[8]=this.c64palette[((bytecol&0x0f)*3)+2];
 
                 const colorRamAddr=0xd800;
-                var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos)&0x0f;
+                var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos,true)&0x0f;
                 colorArray[9]= this.c64palette[(colRamVal*3)+0];
                 colorArray[10]=this.c64palette[(colRamVal*3)+1];
                 colorArray[11]=this.c64palette[(colRamVal*3)+2];
 
-                var bytepix=mmu.readAddr(baseaddr);
+                var bytepix=mmu.readAddr(baseaddr,true);
 
                 for (var px=0;px<8;px+=2)
                 {
@@ -817,6 +826,7 @@ class vic
         }
     }
 
+/*    
     drawBitmapScreen(mmu,cia2)
     {
         var vicBaseAddr = (~cia2.dataPortA & 0x03) << 14;
@@ -929,6 +939,7 @@ class vic
         }
 
     }
+*/
 
     drawSprites(chpx,chpy,mmu,cia2)
     {
@@ -949,12 +960,18 @@ class vic
                 if ((this.spritePositionXupperbit_d010 & (1 << spritenum)) > 0) posx |= 256;
                 var posy = this.spritePositionsY[spritenum];
         
-                var vicbank = cia2.cia2getVICbank()&0xffff;
-                vicbank = (3 - vicbank) * 0x4000;
+                /*var vicbank = cia2.cia2getVICbank();
+                vicbank = (3-vicbank) * 0x4000;
                 var memsetup2 = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
-        
-                var sprbaseAddress = (mmu.readAddr((vicbank | memsetup2 | 0x3f8) + spritenum)) * 64;
-        
+                var sprbaseAddress=mmu.readAddr((vicbank | memsetup2 | 0x3f8) + spritenum,true) * 64;*/
+
+                //var vicbank = cia2.cia2getVICbank();
+                //vicbank = (3-vicbank) * 0x4000;                
+                var vicBaseAddr = (~cia2.dataPortA & 0x03) << 14;
+                var vicscreenMemoryAddr = (this.memoryControlReg_d018 & 0xf0) << 6;
+                var basecoladdr=vicBaseAddr+vicscreenMemoryAddr;
+                var spritePointers=basecoladdr+0x3f8;
+                
                 var sprExpandHorz = ((this.spriteExpandHorizontal_d01d & (1 << spritenum)) != 0);
                 var sprExpandVert = ((this.spriteExpandVertical_d017 & (1 << spritenum)) != 0);
 
@@ -968,7 +985,9 @@ class vic
                     {
                         for (var xbyte=0;xbyte<3;xbyte++)
                         {
-                            var curbyte = mmu.readAddr((vicbank | sprbaseAddress) + (xbyte+(ybyte*3)));
+                            //var curbyte = mmu.readAddr((vicbank | sprbaseAddress) + (xbyte+(ybyte*3)),true);
+                            var saddr = vicBaseAddr + (mmu.readAddr(spritePointers + spritenum,true) << 6);
+                            var curbyte = mmu.readAddr(saddr + (xbyte+(ybyte*3)),true);
 
                             for (var bit = 0; bit < 8; bit++)
                             {
@@ -1031,7 +1050,9 @@ class vic
                     {
                         for (var xbyte=0;xbyte<3;xbyte++)
                         {
-                            var curbyte = mmu.readAddr((vicbank | sprbaseAddress) + (xbyte+(ybyte*3)));
+                            //var curbyte = mmu.readAddr((vicbank | sprbaseAddress) + (xbyte+(ybyte*3)),true);
+                            var saddr = vicBaseAddr + (mmu.readAddr(spritePointers + spritenum,true) << 6);
+                            var curbyte = mmu.readAddr(saddr + (xbyte+(ybyte*3)),true);
 
                             for (var bit = 0; bit < 4; bit++)
                             {
@@ -1147,6 +1168,7 @@ class vic
 
     }
 
+/*    
     simpleRenderer(canvasName,px,py,mmu,cia2)
     {
         var canvas = document.getElementById(canvasName);
@@ -1230,6 +1252,7 @@ class vic
         this.canvasRenderer.getContext('2d').putImageData(this.imgData, 0, 0);
         ctx.drawImage(this.canvasRenderer, px,py, this.xResolutionTotal, this.yResolutionTotal);
     }
+*/
 
     //
     // scanline renderer
