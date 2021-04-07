@@ -141,6 +141,10 @@ function startupFunction()
 			document.getElementById("mainCanvass").width=900;
 			document.getElementById("mainCanvass").height=600;
 		}
+		else if (e.key=="+")
+		{
+			vicChip.debugShifter+=0x10;
+		}
 		else
 		{
 			for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") 
@@ -279,7 +283,7 @@ function startupFunction()
 		var fpeez=(1000/frameTime).toFixed(1);
 		fpsOut.innerHTML = fpeez + " fps";
 
-		window.setTimeout(updateScreen,13);
+		window.setTimeout(updateScreen,14);
 	}
 
 	updateScreen();

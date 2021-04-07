@@ -133,6 +133,7 @@ class cpu6510
         this.instructionTable[0xA4]=[2,3,`LDY %d`];
         this.instructionTable[0xA5]=[2,3,`LDA %d`];
         this.instructionTable[0xA6]=[2,3,`LDX %d`];
+        this.instructionTable[0xA7]=[2,3,`LAX %d`];
         this.instructionTable[0xA8]=[1,2,`TAY`];
         this.instructionTable[0xA9]=[2,2,`LDA %d`];
         this.instructionTable[0xAA]=[1,2,`TAX`];
@@ -142,6 +143,7 @@ class cpu6510
 
         this.instructionTable[0xB0]=[2,2,`BCS %d`];//*
         this.instructionTable[0xB1]=[2,5,`LDA (%d),Y`];//*
+        this.instructionTable[0xB3]=[2,5,`LAX (%d),Y`];//*
         this.instructionTable[0xB4]=[2,4,`LDY %d,X`];//*
         this.instructionTable[0xB5]=[2,4,`LDA %d,X`];//*
         this.instructionTable[0xB6]=[2,4,`LDX %d,Y`];//*
@@ -1856,6 +1858,16 @@ class cpu6510
                 this.doFlagsNZ(this.x);
                 break;
             }
+            case 0xA7:
+            {
+                // LAX zeropage undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var zpval=this.mmu.readAddr(operand);
+                this.a=zpval;
+                this.x=zpval;
+                this.doFlagsNZ(this.a);
+                break;
+            }
             case 0xA8:
             {
                 // TAY
@@ -1920,6 +1932,18 @@ class cpu6510
                 this.a=this.mmu.readAddr(finalAddress);
                 this.doFlagsNZ(this.a);
                 elapsedCycles+=this.pageCross(address,this.y);
+                break;
+            }
+            case 0xb3:
+            {
+                // LAX (ZeroPage),Y undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var indi = this.mmu.readAddr16bit(operand);
+                var finval=this.mmu.readAddr((indi+this.y)&0xffff);
+                this.a=finval;
+                this.x=finval;
+                this.doFlagsNZ(this.a);
+                elapsedCycles+=this.pageCross(indi,this.y);
                 break;
             }
             case 0xb4:
