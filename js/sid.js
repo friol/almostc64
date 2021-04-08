@@ -70,8 +70,6 @@ class sid
 
     getNextRandom()
     {
-        //this.randomSeed = this.randomSeed * 1103515245 + 12345;
-        //return (this.randomSeed >> 16)&0xff;        
         return (Math.floor(Math.random()*255.0))&0xff;
     }
 
@@ -79,8 +77,10 @@ class sid
     {
         try 
         {
-            //this.audioEnabled=false;
             this.audioEnabled=true;
+            //this.audioEnabled=false;
+            //return;
+
             this.audioBufSize=1024;
 
             var self=this;

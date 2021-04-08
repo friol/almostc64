@@ -5,7 +5,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>AlmostC64 v0.8</title>
+    <title>AlmostC64 v0.9</title>
 
     <script src="js/jquery-3.4.1.min.js"></script>
     <script src="js/utils.js"></script>
@@ -21,7 +21,7 @@
 </head>
 <body>
 
-<img src="img/almost64logo.png" /> - Commodore64 emulator v0.8 - <span id="fpsSpan">-</span><br/>
+<img src="img/almost64logo.png" /> - Commodore64 emulator v0.9 - <span id="fpsSpan">-</span><br/>
 
 <canvas id="mainCanvass" width="402" height="292" style="float:left"></canvas>
 <!--<canvas id="mainCanvass" width="800" height="600" style="float:left"></canvas>-->
@@ -40,28 +40,34 @@
 </div>
 </form>
 
-<span style="float:left;clear:both;margin-top:10px">Run a cracktro: 
+<span style="float:left;clear:both;margin-top:10px">Load game/cracktro: 
 <select name="cracktros" id="cracktrosSelector" onchange="loadCracktro(this)" disabled>
     <option value="run">--</option>
-    <option value="fc-01.prg">fc-01.prg</option>
-    <option value="fc-02.prg">fc-02.prg</option>
-    <option value="flt-08.prg">flt-08.prg</option>
-    <option value="flt-10.prg">flt-10.prg</option>
-    <option value="gazunda-01.prg">gazunda-01.prg</option>
-    <option value="gigaline-01.prg">gigaline-01.prg</option>
-    <option value="nirvana-03.prg">nirvana-03.prg</option>
-    <option value="noice-02.prg">noice-02.prg</option>
-    <option value="pier-04.prg">pier-04.prg</option>
-    <option value="publichange-02.prg">publichange-02.prg</option>
-    <option value="pyra-01.prg">pyra-01.prg</option>
-    <option value="pyra-03.prg">pyra-03.prg</option>
-    <option value="ssw-02.prg">ssw-02.prg</option>
-    <option value="s_w_a_t-03.prg">s_w_a_t-03.prg</option>
-    <option value="talent-04.prg">talent-04.prg</option>
-    <option value="tgc-01.prg">tgc-01.prg</option>
-    <option value="twins-02.prg">twins-02.prg</option>
-    <option value="twins-10.prg">twins-10.prg</option>
-    <option value="tz-04.prg">tz-04.prg</option>
+    <option value="VVVVVV.prg">[Game] VVVVVV (demo)</option>
+    <option value="c64anabalt.prg">[Game] c64anabalt</option>
+    <option value="AlterEgo.prg">[Game] AlterEgo</option>
+    <option value="digiloi64.prg">[Game] Digiloi</option>
+    <option value="super_goatron.prg">[Game] Super Goatron</option>
+    <option value="yhtwtg.prg">[Game] You Have To Win The Game</option>
+    <option value="fc-01.prg">[Cracktro] fc-01.prg</option>
+    <option value="fc-02.prg">[Cracktro] fc-02.prg</option>
+    <option value="flt-08.prg">[Cracktro] flt-08.prg</option>
+    <option value="flt-10.prg">[Cracktro] flt-10.prg</option>
+    <option value="gazunda-01.prg">[Cracktro] gazunda-01.prg</option>
+    <option value="gigaline-01.prg">[Cracktro] gigaline-01.prg</option>
+    <option value="nirvana-03.prg">[Cracktro] nirvana-03.prg</option>
+    <option value="noice-02.prg">[Cracktro] noice-02.prg</option>
+    <option value="pier-04.prg">[Cracktro] pier-04.prg</option>
+    <option value="publichange-02.prg">[Cracktro] publichange-02.prg</option>
+    <option value="pyra-01.prg">[Cracktro] pyra-01.prg</option>
+    <option value="pyra-03.prg">[Cracktro] pyra-03.prg</option>
+    <option value="ssw-02.prg">[Cracktro] ssw-02.prg</option>
+    <option value="s_w_a_t-03.prg">[Cracktro] s_w_a_t-03.prg</option>
+    <option value="talent-04.prg">[Cracktro] talent-04.prg</option>
+    <option value="tgc-01.prg">[Cracktro] tgc-01.prg</option>
+    <option value="twins-02.prg">[Cracktro] twins-02.prg</option>
+    <option value="twins-10.prg">[Cracktro] twins-10.prg</option>
+    <option value="tz-04.prg">[Cracktro] tz-04.prg</option>
 </select>
 </span>
 

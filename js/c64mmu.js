@@ -9,15 +9,13 @@ class c64mmu
         this.char_in=false;
         this.io_in=false;
 
+        this.ram64k=new Array(65536);
+        this.cpustack=new Array(0x100);
+
         this.chargenROM=new Array();
         this.basicROM=new Array();
         this.kernalROM=new Array();
 
-        this.ram64k=new Array(65536);
-        this.cpustack=new Array(0x100);
-
-        //for (var b=0;b<65536;b++) this.ram64k[b]=0xff;
-        // apparently, C64 RAM has a power-on pattern...
         var ramPos=0;
         for (var i = 0; i < 512; i++)
         {
@@ -135,7 +133,11 @@ class c64mmu
 
     readAddr(addr,fromVIC=false)
     {
-        addr&=0xffff;
+        //addr&=0xffff;
+        if ((addr<0)||(addr>0xffff))
+        {
+            alert("read::This should not happen!!! Addr is "+addr.toString(16));
+        }
 
         if (fromVIC)
         {
@@ -232,7 +234,7 @@ class c64mmu
                     // color RAM
                     return ((this.ram64k[addr]&0x0f)|(this.lastVICbyte&0xf0));
                 }                
-                else
+                else if ((addr>=0xd000)&&(addr<=0xd3ff))
                 {
                     this.lastVICbyte=this.vicChip.readVICRegister(addr);
                     return this.lastVICbyte;
@@ -268,7 +270,11 @@ class c64mmu
 
     writeAddr(addr,value)
     {
-        addr&=0xffff;
+        //addr&=0xffff;
+        if ((addr<0)||(addr>0xffff))
+        {
+            alert("write::This should not happen!!! Addr is "+addr.toString(16));
+        }
 
         if (addr==0x0000)
         {
@@ -319,7 +325,7 @@ class c64mmu
                 if ((addr>=0xd800)&&(addr<=0xdbff))
                 {
                     // color RAM
-                    this.ram64k[addr]=value&0x0f;
+                    this.ram64k[addr]=value;
                 }
                 else if ((addr >= 0xdc00) && (addr <= 0xdcff))
                 {
@@ -333,7 +339,7 @@ class c64mmu
                 {
                     this.sidChip.writeRegister(addr, value);
                 }
-                else
+                else if ((addr>=0xd000)&&(addr<=0xd3ff))
                 {
                     this.vicChip.writeVICRegister(addr, value);
                 }

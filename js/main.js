@@ -1,4 +1,18 @@
-/* Almost C64 emulator - main.js */
+
+/* 
+
+Almost C64 emulator - main.js 
+
+TODO:
+- spr/spr collisions
+- ADSR envelopes
+- y scrolling, 24 rows
+
+DONE:
+- performance: screen buffer as an array of bytes, then blit to RGBA
+- x scrolling, 38/40 cols
+
+*/
 
 var globalListOfOpcodes;
 var globalEmuStatus=0; // 0 debugging single step, 1 running
@@ -231,7 +245,7 @@ function startupFunction()
 		ctx.fillStyle = "black";
 		ctx.font = "10px Arial";
 		ctx.fillText("Welcome to the almostC64 emulator. To start, click on the \"play\" button.", 10, 20);
-		ctx.fillText("You can load a .prg file and run it or start a cracktro from the selector below.", 10, 32);
+		ctx.fillText("You can load a .prg file and run it or start a game/cracktro from the selector below.", 10, 32);
 		ctx.fillText("You can choose which joystick to use (joystick is controlled with cursor keys and CTRL).", 10, 44);
 	}
 
@@ -283,7 +297,7 @@ function startupFunction()
 		var fpeez=(1000/frameTime).toFixed(1);
 		fpsOut.innerHTML = fpeez + " fps";
 
-		window.setTimeout(updateScreen,14);
+		window.setTimeout(updateScreen,13);
 	}
 
 	updateScreen();

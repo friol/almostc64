@@ -159,6 +159,7 @@ class cpu6510
         this.instructionTable[0xC4]=[2,3,`CPY %d`];
         this.instructionTable[0xC5]=[2,3,`CMP %d`];
         this.instructionTable[0xC6]=[2,5,`DEC %d`];
+        this.instructionTable[0xC7]=[2,5,`DCP %d`]; // undocumented
         this.instructionTable[0xC8]=[1,2,`INY`];
         this.instructionTable[0xC9]=[2,2,`CMP %d`];
         this.instructionTable[0xCA]=[1,2,`DEX`];
@@ -1750,6 +1751,13 @@ class cpu6510
             {
                 // STA (indirect),Y
                 var operand=this.mmu.readAddr(this.pc+1);
+
+                if (operand==undefined)
+                {
+                    var wowo=0;
+                    alert("operand undefined in STA (indirect),Y");
+                }
+
                 var indi = this.mmu.readAddr16bit(operand);
                 this.mmu.writeAddr(indi+this.y,this.a);
                 break;
@@ -2086,6 +2094,21 @@ class cpu6510
                 if (mval<0) mval=0xff;
                 this.mmu.writeAddr(operand,mval);
                 this.doFlagsNZ(mval);
+                break;
+            }
+            case 0xC7:
+            {
+                // DCP zeropage undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var mval=this.mmu.readAddr(operand);
+                mval-=1;
+                if (mval<0) mval=0xff;
+                this.mmu.writeAddr(operand,mval);
+
+                if (this.a>=mval) this.flagsC=1;
+                else this.flagsC=0;
+                this.doFlagsNZ(this.a-mval);
+
                 break;
             }
             case 0xC8:
