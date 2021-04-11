@@ -26,6 +26,7 @@ class cpu6510
         this.instructionTable[0x01]=[2,6,`ORA (%d,X)`];
         this.instructionTable[0x05]=[2,3,`ORA %d`];
         this.instructionTable[0x06]=[2,5,`ASL %d`];
+        this.instructionTable[0x07]=[2,5,`SLO %d`];
         this.instructionTable[0x08]=[1,3,`PHP`];
         this.instructionTable[0x09]=[2,2,`ORA %d`];
         this.instructionTable[0x0A]=[1,2,`ASL`];
@@ -111,6 +112,7 @@ class cpu6510
         this.instructionTable[0x84]=[2,3,`STY %d`];
         this.instructionTable[0x85]=[2,3,`STA %d`];
         this.instructionTable[0x86]=[2,3,`STX %d`];
+        this.instructionTable[0x87]=[2,3,`SAX %d`]; // undocumented
         this.instructionTable[0x88]=[1,2,`DEY`];
         this.instructionTable[0x8A]=[1,2,`TXA`];
         this.instructionTable[0x8C]=[3,4,`STY %d`];
@@ -613,6 +615,27 @@ class cpu6510
                 loccontent <<= 1;
                 this.mmu.writeAddr(operand,loccontent&0xff);
                 this.doFlagsNZ(loccontent&0xff);
+                break;
+            }
+            case 0x07:
+            {
+                // SLO zeropage undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var zpval=this.mmu.readAddr(operand);
+
+                this.mmu.writeAddr(operand,(zpval*2)&0xff);
+                this.a=this.a|((zpval*2)&0xff);
+
+                if ((this.a & 0x80)==0x80) // FIXXX?
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);
                 break;
             }
             case 0x08:
@@ -1692,6 +1715,13 @@ class cpu6510
                 // STX zeropage
                 var operand=this.mmu.readAddr(this.pc+1);
                 this.mmu.writeAddr(operand,this.x);
+                break;
+            }
+            case 0x87:
+            {
+                // SAX zeropage undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                this.mmu.writeAddr(operand,this.a&this.x);
                 break;
             }
             case 0x88:

@@ -55,7 +55,12 @@ class sid
         this.squareWaveLen=8192;
         this.sawtoothLen=8192;
 
-        this.triangleChannelArray=[15, 14, 13, 12, 11, 10,  9,  8,  7,  6,  5,  4,  3,  2,  1,  0, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15];
+        this.digiQueue=new Array();
+
+        /*this.sampleTab=[
+	        0x8000,0x9111,0xa222,0xb333,0xc444,0xd555,0xe666,0xf777,
+            0x0888,0x1999,0x2aaa,0x3bbb,0x4ccc,0x5ddd,0x6eee,0x7fff
+        ];*/
 
         //
         // audio engine
@@ -131,12 +136,16 @@ class sid
         var dataL = e.outputBuffer.getChannelData(0);
         var dataR = e.outputBuffer.getChannelData(1);
 
+        var numClocksToCover=this.internalClock-this.internalClockPos;
+        if (numClocksToCover<=0) return;
+        var realStep=numClocksToCover/(this.multiplier*this.audioBufSize);
+
         for (var s=0;s<this.audioBufSize;s++)
         {
             for (var cyc=0;cyc<this.multiplier;cyc++)
             {
                 // process queued events if current time >= event timestamp
-                if ((this.eventsQueue.length>0)&&(this.eventsQueue[0][2]<=this.internalClockPos))
+                if ((this.eventsQueue.length>0)&&(this.eventsQueue[0][2]<=Math.floor(this.internalClockPos)))
                 {
                     var curEvent=this.eventsQueue.shift();
                     var value=curEvent[0];
@@ -210,6 +219,7 @@ class sid
                         this.globalVolume=value&0x0f;
                         this.voice3muted=((value&0x80)==0x80);
                     }
+
                 }
 
                 //
@@ -221,7 +231,10 @@ class sid
                     this.sampleArray[cyc]=this.mixVoices()/3.0;                
                 }
 
-                this.internalClockPos++;
+                // digis
+                //this.sampleArray[cyc]=(this.globalVolume/15.01)*(this.globalVolume/15.0);
+
+                this.internalClockPos+=realStep;
             }
 
             // average the array, and output it 
@@ -235,7 +248,8 @@ class sid
             dataL[s]=runningTotal;
             dataR[s]=runningTotal;
         }
-        
+
+        if (this.eventsQueue.length>0) this.eventsQueue=[];
     }
 
     mixVoices()
@@ -280,12 +294,6 @@ class sid
                 }
                 else if ((this.voiceArray[v].voiceWaveform&0xf)==0x0) // no sound
                 {
-                    /*//alert("This should not happen!");
-                    finalSample+=Math.sin(this.voiceArray[v].wavePos);
-                    var realFreq=this.voiceArray[v].frequency/(8192.0*this.multiplier*8.0);
-                    this.voiceArray[v].wavePos+=realFreq;
-                    this.voiceArray[v].wavePos%=2.0*3.141592;*/
-                    // voice is zero 
                 }
                 else
                 {
@@ -330,5 +338,10 @@ class sid
         addr=(addr&0x1f)|0xd400;
         this.lastSidByte=value;
         this.eventsQueue.push([value,addr,this.internalClock]);
+
+        if (addr==0xd418)
+        {
+            //console.log("SID::wrote to 0xd418 "+value.toString(16));
+        }
     }
 }

@@ -56,13 +56,19 @@ class vic
         this.frameBuffer=new Uint8ClampedArray(this.xResolutionTotal*this.yResolutionTotal*4); // RGBA framebuffer
         for (var i=0;i<(this.xResolutionTotal*this.yResolutionTotal*4);i++)
         {
-            this.frameBuffer[i]=255;
+            this.frameBuffer[i]=0;
         }        
 
         this.byteFrameBuffer=new Uint8ClampedArray(this.xResolutionTotal*this.yResolutionTotal);
         for (var i=0;i<this.xResolutionTotal*this.yResolutionTotal;i++)
         {
             this.byteFrameBuffer[i]=0;            
+        }
+
+        this.spriteFrameBuffer=new Uint8ClampedArray(this.xResolutionTotal*this.yResolutionTotal); // for spr-spr collision
+        for (var i=0;i<this.xResolutionTotal*this.yResolutionTotal;i++)
+        {
+            this.spriteFrameBuffer[i]=0;            
         }
 
         //
@@ -263,10 +269,10 @@ class vic
         {
             this.spriteExpandHorizontal_d01d=value;
         }
-        else if (addr==0xd01e)
+        /*else if (addr==0xd01e)
         {
             this.spriteToSpriteCollision_d01e=value;
-        }
+        }*/
         else if (addr==0xd01f)
         {
             this.spriteToBackgroundCollision_d01f=value;
@@ -389,7 +395,9 @@ class vic
         }
         else if (addr == 0xd01e)
         {
-            return 0x00; // FIXX sprite collision register
+            var val=this.spriteToSpriteCollision_d01e;
+            this.spriteToSpriteCollision_d01e=0;
+            return val;
         }
         else if (addr == 0xd01f)
         {
@@ -629,6 +637,23 @@ class vic
         }
     }
 
+    updateSpriteFramebuffer(pos,spriteNum)
+    {
+        if (this.spriteFrameBuffer[pos]!=0)
+        {
+            // collision spr-spr: set bits for spriteNum and spriteFrameBuffer[pos] in register $d01e
+            var spra=spriteNum;
+            var sprb=this.spriteFrameBuffer[pos];
+
+            this.spriteToSpriteCollision_d01e|=(1<<spra);
+            this.spriteToSpriteCollision_d01e|=(1<<sprb);
+        }
+        else
+        {
+            this.spriteFrameBuffer[pos]=spriteNum;
+        }
+    }
+
     drawSprites(chpx,chpy,mmu,cia2,curScanline)
     {
         chpx-=24;
@@ -677,6 +702,7 @@ class vic
                                         if (runypos==curScanline)
                                         {
                                             this.byteFrameBuffer[runxpos+(runypos*this.xResolutionTotal)]=sprcolornum;
+                                            this.updateSpriteFramebuffer(runxpos+(runypos*this.xResolutionTotal),spritenum);
                                         }
 
                                         if (sprExpandVert)
@@ -684,6 +710,7 @@ class vic
                                             if ((runypos+1)==curScanline)
                                             {
                                                 this.byteFrameBuffer[runxpos+((runypos+1)*this.xResolutionTotal)]=sprcolornum;
+                                                this.updateSpriteFramebuffer(runxpos+(runypos*this.xResolutionTotal),spritenum);
                                             }
                                         }
 
@@ -692,6 +719,7 @@ class vic
                                             if (runypos==curScanline)
                                             {
                                                 this.byteFrameBuffer[1+runxpos+((runypos)*this.xResolutionTotal)]=sprcolornum;
+                                                this.updateSpriteFramebuffer(1+runxpos+(runypos*this.xResolutionTotal),spritenum);
                                             }
 
                                             if (sprExpandVert)
@@ -699,6 +727,7 @@ class vic
                                                 if ((runypos+1)==curScanline)
                                                 {
                                                     this.byteFrameBuffer[1+runxpos+((runypos+1)*this.xResolutionTotal)]=sprcolornum;
+                                                    this.updateSpriteFramebuffer(1+runxpos+((runypos+1)*this.xResolutionTotal),spritenum);
                                                 }
                                             }
                                         }
@@ -741,6 +770,9 @@ class vic
                                         {
                                             this.byteFrameBuffer[runxpos+(runypos*this.xResolutionTotal)]=colArray[bay];
                                             this.byteFrameBuffer[1+runxpos+(runypos*this.xResolutionTotal)]=colArray[bay];
+
+                                            this.updateSpriteFramebuffer(runxpos+(runypos*this.xResolutionTotal),spritenum);
+                                            this.updateSpriteFramebuffer(1+runxpos+(runypos*this.xResolutionTotal),spritenum);
                                         }
 
                                         if (sprExpandVert)
@@ -749,6 +781,9 @@ class vic
                                             {
                                                 this.byteFrameBuffer[runxpos+((runypos+1)*this.xResolutionTotal)]=colArray[bay];
                                                 this.byteFrameBuffer[1+runxpos+((runypos+1)*this.xResolutionTotal)]=colArray[bay];
+
+                                                this.updateSpriteFramebuffer(runxpos+((runypos+1)*this.xResolutionTotal),spritenum);
+                                                this.updateSpriteFramebuffer(1+runxpos+((runypos+1)*this.xResolutionTotal),spritenum);
                                             }
                                         }
 
@@ -758,6 +793,9 @@ class vic
                                             {
                                                 this.byteFrameBuffer[2+runxpos+((runypos)*this.xResolutionTotal)]=colArray[bay];
                                                 this.byteFrameBuffer[3+runxpos+((runypos)*this.xResolutionTotal)]=colArray[bay];
+
+                                                this.updateSpriteFramebuffer(2+runxpos+((runypos)*this.xResolutionTotal),spritenum);
+                                                this.updateSpriteFramebuffer(3+runxpos+((runypos)*this.xResolutionTotal),spritenum);
                                             }
 
                                             if (sprExpandVert)
@@ -766,6 +804,9 @@ class vic
                                                 {
                                                     this.byteFrameBuffer[2+runxpos+((runypos+1)*this.xResolutionTotal)]=colArray[bay];
                                                     this.byteFrameBuffer[3+runxpos+((runypos+1)*this.xResolutionTotal)]=colArray[bay];
+
+                                                    this.updateSpriteFramebuffer(2+runxpos+((runypos+1)*this.xResolutionTotal),spritenum);
+                                                    this.updateSpriteFramebuffer(3+runxpos+((runypos+1)*this.xResolutionTotal),spritenum);
                                                 }
                                             }
                                         }
@@ -784,6 +825,18 @@ class vic
                     }                    
 
                 }
+            }
+        }        
+
+        // spr to spr irq
+        if (this.spriteToSpriteCollision_d01e==0)
+        {
+            this.intstatusreg |= 0x04;
+            if ((this.irqEnable_d01a & 0x04) !=0)
+            {
+                // trigger irq
+                this.theCpu.vicIrqPending=true;
+                this.intstatusreg |= 0x80;
             }
         }        
     }
@@ -853,6 +906,12 @@ class vic
                 this.frameBuffer[pos+2]=this.c64palette[(this.byteFrameBuffer[p]*3)+2];
                 this.frameBuffer[pos+3]=255;
                 pos+=4;
+            }
+
+            // clear spr-spr collision framebuffer
+            for (var i=0;i<this.xResolutionTotal*this.yResolutionTotal;i++)
+            {
+                this.spriteFrameBuffer[i]=0;            
             }
 
             // spit it all out

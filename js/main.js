@@ -4,13 +4,16 @@
 Almost C64 emulator - main.js 
 
 TODO:
-- spr/spr collisions
+- spr/background collision
+- undocumented opcodes
 - ADSR envelopes
 - y scrolling, 24 rows
+- SID "voice"
 
 DONE:
 - performance: screen buffer as an array of bytes, then blit to RGBA
 - x scrolling, 38/40 cols
+- spr/spr collisions
 
 */
 
