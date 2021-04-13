@@ -30,6 +30,8 @@ class cpu6510
         this.instructionTable[0x08]=[1,3,`PHP`];
         this.instructionTable[0x09]=[2,2,`ORA %d`];
         this.instructionTable[0x0A]=[1,2,`ASL`];
+        this.instructionTable[0x0B]=[2,2,`ANC %d`]; // undocumented
+        this.instructionTable[0x0C]=[3,4,`NOP %d`]; // undocumented
         this.instructionTable[0x0D]=[3,4,`ORA %d`];
         this.instructionTable[0x0E]=[3,6,`ASL %d`];
 
@@ -158,6 +160,7 @@ class cpu6510
 
         this.instructionTable[0xC0]=[2,2,`CPY %d`];
         this.instructionTable[0xC1]=[2,6,`CMP (%d,X)`];
+        this.instructionTable[0xC3]=[2,8,`DCP (%d,X)`]; // undocumented
         this.instructionTable[0xC4]=[2,3,`CPY %d`];
         this.instructionTable[0xC5]=[2,3,`CMP %d`];
         this.instructionTable[0xC6]=[2,5,`DEC %d`];
@@ -681,6 +684,30 @@ class cpu6510
                 loccontent <<= 1;
                 this.a = loccontent&0xff;
                 this.doFlagsNZ(this.a);
+                break;
+            }
+            case 0x0B:
+            {
+                // ANC immediate undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                this.a&=operand;
+
+                if ((this.a & 0x80)==0x80)
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);
+                break;
+            }
+            case 0x0C:
+            {
+                // NOP absolute undocumented
+                var operand=this.mmu.readAddr16bit(this.pc+1);
                 break;
             }
             case 0x0D:
@@ -2081,6 +2108,23 @@ class cpu6510
                 if (this.a>=iop) this.flagsC=1;
                 else this.flagsC=0;
                 this.doFlagsNZ(this.a-iop);
+                break;
+            }
+            case 0xC3:
+            {
+                // DCP zeropage,x undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var indi = this.mmu.readAddr16bit((operand + this.x) & 0xff);
+                var mval=this.mmu.readAddr(indi);
+                mval-=1;
+                if (mval<0) mval=0xff;
+
+                this.mmu.writeAddr(indi,mval);
+
+                if (this.a>=mval) this.flagsC=1;
+                else this.flagsC=0;
+                this.doFlagsNZ(this.a-mval);
+
                 break;
             }
             case 0xC4:

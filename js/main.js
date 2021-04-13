@@ -4,16 +4,18 @@
 Almost C64 emulator - main.js 
 
 TODO:
+- fix delta instruction c3
 - spr/background collision
 - undocumented opcodes
 - ADSR envelopes
 - y scrolling, 24 rows
-- SID "voice"
 
 DONE:
+- sprite priority d01b
 - performance: screen buffer as an array of bytes, then blit to RGBA
 - x scrolling, 38/40 cols
 - spr/spr collisions
+- SID "voice"
 
 */
 

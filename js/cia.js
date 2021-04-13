@@ -57,7 +57,7 @@ class cia
             "v","u","h","b","8","g","y","7",
             "x","t","f","c","6","d","r","5",
             "Shift","e","s","z","4","a","w","3",
-            "k2","F5","F3","F1","F7","eee","Enter","Backspace"
+            "Pause","F5","F3","F1","F7","eee","Enter","Backspace"
         ];        
     }
 

@@ -507,8 +507,8 @@ class vic
                     var cur2bits = (curbyte >> (6 - x)) & 0x03;
                     if (cur2bits<0x03)
                     {
-                        this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
-                        this.byteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
+                        if ((this.spriteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]==0)||(cur2bits!=0)) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
+                        if ((this.spriteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]==0)||(cur2bits!=0)) this.byteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
                     }
                     else
                     {
@@ -529,7 +529,7 @@ class vic
                     }
                     else
                     {
-                        this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[bgColorNumber];
+                        if (this.spriteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]==0) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[bgColorNumber];
                     }
                 }
             }
@@ -654,7 +654,7 @@ class vic
         }
     }
 
-    drawSprites(chpx,chpy,mmu,cia2,curScanline)
+    drawSprites(chpx,chpy,mmu,cia2,curScanline,priorityVal)
     {
         chpx-=24;
         chpy-=46;
@@ -668,7 +668,7 @@ class vic
 
         for (var spritenum = 7; spritenum >=0; spritenum--)
         {
-            if ((this.spriteEnable_d015 & (1 << spritenum)) != 0)
+            if ( ((this.spriteEnable_d015 & (1 << spritenum)) != 0) && (((this.spriteBackgroundPriority_d01b&(1<<spritenum))>>spritenum)==priorityVal) )
             {
                 var sprcolornum = this.spriteColors_d027_d02e[spritenum] & 0x0f;
                 colArray[2]=sprcolornum;
@@ -854,6 +854,9 @@ class vic
 
         if ((this.screencontrol1_d011 & 0x10)!=0) // screen not blanked
         {
+            // background sprites
+            this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline,1);
+
             if ((this.screencontrol1_d011&0x20)==0)
             {
                 // are we in a border scanline?
@@ -879,11 +882,8 @@ class vic
                 }
             }
 
-            // sprites
-
-            var chpx=px+this.xLeftBorderWidth;
-            var chpy=py+this.yUpperBorderWidth;
-            this.drawSprites(chpx,chpy,mmu,cia2,curScanline);
+            // foreground sprites
+            this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline,0);
         }
         else
         {

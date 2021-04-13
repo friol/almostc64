@@ -140,8 +140,46 @@ class sid
         if (numClocksToCover<=0) return;
         var realStep=numClocksToCover/(this.multiplier*this.audioBufSize);
 
+        var ic=this.internalClockPos;
+        var digiTrack=new Array();
+        var globalVol=this.globalVolume;
+        var iqpos=0;
+        var workingQueue=new Array();
+        for (var i=0;i<this.eventsQueue.length;i++)
+        {
+            if (this.eventsQueue[i][1]==0xd418)
+            {
+                workingQueue.push(this.eventsQueue[i]);
+            }
+        }
+
+        if (workingQueue.length>0)
+        {
+            for (var s=0;s<this.audioBufSize;s++)
+            {
+                var runningSum=0;
+                for (var cyc=0;cyc<this.multiplier;cyc++)
+                {
+                    if ((iqpos<workingQueue.length)&&(workingQueue[iqpos][2]==Math.floor(ic)))
+                    {
+                        var value=workingQueue[iqpos][0];
+                        globalVol=value&0x0f;
+                        iqpos++;
+                    }
+
+                    runningSum+=(globalVol/15.0);
+                    ic+=realStep;
+                }
+
+                runningSum/=this.multiplier;
+                digiTrack.push(runningSum);
+            }
+        }
+
         for (var s=0;s<this.audioBufSize;s++)
         {
+            var runningTotal=0.0;
+
             for (var cyc=0;cyc<this.multiplier;cyc++)
             {
                 // process queued events if current time >= event timestamp
@@ -228,22 +266,16 @@ class sid
 
                 if (globalEmuStatus==1)
                 {
-                    this.sampleArray[cyc]=this.mixVoices()/3.0;                
+                    runningTotal+=this.mixVoices()/3.0;                
                 }
-
-                // digis
-                //this.sampleArray[cyc]=(this.globalVolume/15.01)*(this.globalVolume/15.0);
 
                 this.internalClockPos+=realStep;
             }
 
-            // average the array, and output it 
-            var runningTotal=0.0;
-            for (var i=0;i<this.multiplier;i++)
-            {
-                runningTotal+=this.sampleArray[i];
-            }
             runningTotal/=this.multiplier;
+
+            if (workingQueue.length>0) runningTotal+=digiTrack[s];
+            else runningTotal+=(this.globalVolume/15.0);
 
             dataL[s]=runningTotal;
             dataR[s]=runningTotal;
