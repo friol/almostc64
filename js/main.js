@@ -4,18 +4,19 @@
 Almost C64 emulator - main.js 
 
 TODO:
-- fix delta instruction c3
 - spr/background collision
 - undocumented opcodes
 - ADSR envelopes
 - y scrolling, 24 rows
 
 DONE:
+- all documented opcodes tested against Lorenz test suite
+- fix delta instruction c3
 - sprite priority d01b
 - performance: screen buffer as an array of bytes, then blit to RGBA
 - x scrolling, 38/40 cols
 - spr/spr collisions
-- SID "voice"
+- SID digis
 
 */
 
@@ -30,6 +31,125 @@ var frameTime = 0, lastLoop = new Date, thisLoop;
 var fpsArray=new Array();
 
 var glbPlayColor="black";
+
+var glbProgList=[
+//"alrb",                                                                 
+//"ancb",                                                                 
+//"aneb",                                                                 
+//"arrb",                                                                 
+//"asoa",                                                                 
+//"asoax",                                                                
+//"asoay",                                                                
+//"asoix",                                                                
+//"asoiy",                                                                
+//"asoz",                                                                 
+//"asozx",                                                                
+//"axsa",                                                                 
+//"axsix",                                                                
+//"axsz",                                                                 
+//"axszy",                                                                
+//"bccr",                                                                 
+//"bcsr",                                                                 
+//"branchwrap",                                                           
+//"cia1pb6",                                                              
+//"cia1pb7",                                                              
+//"cia1ta",                                                               
+//"cia1tab",                                                              
+//"cia1tb",                                                               
+//"cia1tb123",                                                            
+//"cia2pb6",                                                              
+//"cia2pb7",                                                              
+//"cia2ta",                                                               
+//"cia2tb",                                                               
+//"cia2tb123",                                                            
+//"cntdef",                                                               
+//"cnto2",                                                                
+//"cpuport",                                                              
+//"cputiming",                                                            
+//"dcma",                                                                 
+//"dcmax",                                                                
+//"dcmay",                                                                
+//"dcmix",                                                                
+//"dcmiy",                                                                
+//"dcmz",                                                                 
+//"dcmzx",                                                                
+//"flipos",                                                               
+//"icr01",                                                                
+//"imr",                                                                  
+//"insa",                                                                 
+//"insax",                                                                
+//"insay",                                                                
+//"insix",                                                                
+//"insiy",                                                                
+//"insz",                                                                 
+//"inszx",                                                                
+//"irq",                                                                  
+//"lasay",                                                                
+//"laxa",                                                                 
+//"laxay",                                                                
+//"laxix",                                                                
+//"laxiy",                                                                
+//"laxz",                                                                 
+//"laxzy",                                                                
+//"loadth",                                                               
+//"lsea",                                                                 
+//"lseax",                                                                
+//"lseay",                                                                
+//"lseix",                                                                
+//"lseiy",                                                                
+//"lsez",                                                                 
+//"lsezx",                                                                
+//"lxab",                                                                 
+//"nmi",                                                                  
+//"nopax",                                                                
+//"nopb",                                                                 
+//"nopn",                                                                 
+//"nopz",                                                                 
+//"nopzx",                                                                
+//"oneshot",                                                              
+//"rlaa",                                                                 
+//"rlaax",                                                                
+//"rlaay",                                                                
+//"rlaix",                                                                
+//"rlaiy",                                                                
+//"rlaz",                                                                 
+//"rlazx",                                                                
+//"rraa",                                                                 
+//"rraax",                                                                
+//"rraay",                                                                
+//"rraix",                                                                
+//"rraiy",                                                                
+//"rraz",                                                                 
+//"rrazx",                                                                
+//"shaay",                                                                
+//"shaiy",                                                                
+//"shsay",                                                                
+//"shxay",                                                                
+//"shyax",                                                                
+//"trap1",                                                                
+//"trap10",                                                               
+//"trap11",                                                               
+//"trap12",                                                               
+//"trap13",                                                               
+//"trap14",                                                               
+//"trap15",                                                               
+//"trap16",                                                               
+//"trap17",                                                               
+//"trap2",                                                                
+//"trap3",                                                                
+//"trap4",                                                                
+//"trap5",                                                                
+//"trap6",                                                                
+//"trap7",                                                                
+//"trap8",                                                                
+//"trap9",                                                                
+//"tsxn",                                                                 
+//"txan",                                                                 
+//"txsn",                                                                 
+//"tyan"                                                                 
+	];
+var glbProgNum=0;
+
 
 //
 //
@@ -90,7 +210,7 @@ function startupFunction()
 		if (dist<60.0) glbPlayColor="#2020e0";
 		else glbPlayColor="black";
 
-		//cpu.setMousePos(relativeX,relativeY);
+		cpu.setMousePos(relativeX,relativeY);
 	}, 
 	false);
 
@@ -265,6 +385,11 @@ function startupFunction()
 				
 				cpu.drawDebugInfo(globalListOfOpcodes,10,30,0);
 				//vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2);
+
+				for (var i=0;i<=294;i++)
+				{
+					vicChip.scanlineRenderer("mainCanvass",380,140,glbMMU,ciaChip2,i);
+				}
 			}
 			else if (globalEmuStatus==1)
 			{
@@ -280,6 +405,12 @@ function startupFunction()
 						// draw previous line
 						vicChip.scanlineRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
 					}
+
+					/*if (cpu.pc==0x819)
+					{
+						globalEmuStatus=0;
+						break;
+					}*/
 				}			
 
 				//vicChip.simpleRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
@@ -340,7 +471,15 @@ function handleFileUpload(fls)
 			var varstart = loadAddr + offset;
 			glbMMU.writeAddr(0x002D,(varstart & 0xff));
 			glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
+			glbMMU.writeAddr(0x002F,(varstart & 0xff));
+			glbMMU.writeAddr(0x0030,((varstart >> 8) & 0xff));
+			glbMMU.writeAddr(0x0031,(varstart & 0xff));
+			glbMMU.writeAddr(0x0032,((varstart >> 8) & 0xff));
 		}		
+		else
+		{
+			alert("Doesn't seem to be a BASIC program");
+		}
 
 		// run program
 
@@ -389,7 +528,15 @@ function loadCracktro(th)
 					var varstart = loadAddr + offset;
 					glbMMU.writeAddr(0x002D,(varstart & 0xff));
 					glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
+					glbMMU.writeAddr(0x002F,(varstart & 0xff));
+					glbMMU.writeAddr(0x0030,((varstart >> 8) & 0xff));
+					glbMMU.writeAddr(0x0031,(varstart & 0xff));
+					glbMMU.writeAddr(0x0032,((varstart >> 8) & 0xff));
 				}		
+				else
+				{
+					alert("Doesn't seem to be a BASIC program");
+				}
 		
 				// run program
 		
@@ -408,6 +555,69 @@ function loadCracktro(th)
         
 		},
 		error: function(xhr, status, error) { alert("Error loading cracktro ["+error+"]"); }
+	});
+}
+
+function loadNextProggie()
+{
+	var thisInstance=this;
+
+	var proggo=glbProgList[glbProgNum];
+	glbProgNum++;
+
+	$.ajax({
+		url: "testsuite/"+proggo,type: "GET",processData: false,dataType: "binary",
+		success: function(data) 
+		{
+			var arrayBuffer;
+			var fileReader = new FileReader();
+			fileReader.onload = function(event) 
+			{
+				arrayBuffer = event.target.result;
+				var uint8ArrayNew  = new Uint8Array(arrayBuffer);
+
+				var loadAddr=((uint8ArrayNew[1]) << 8) | uint8ArrayNew[0];
+
+				var offset=0;
+				for (var i = 2; i < uint8ArrayNew.length; i++) 
+				{
+					glbMMU.writeAddr(loadAddr - 2 + i,uint8ArrayNew[i]);
+					offset+=1;
+				}
+		
+				// if loaded a BASIC program,update pointers
+				if (loadAddr == 0x0801)
+				{
+					var varstart = loadAddr + offset;
+					glbMMU.writeAddr(0x002D,(varstart & 0xff));
+					glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
+					glbMMU.writeAddr(0x002F,(varstart & 0xff));
+					glbMMU.writeAddr(0x0030,((varstart >> 8) & 0xff));
+					glbMMU.writeAddr(0x0031,(varstart & 0xff));
+					glbMMU.writeAddr(0x0032,((varstart >> 8) & 0xff));
+				}		
+				else
+				{
+					alert("Doesn't seem to be a BASIC program");
+				}
+		
+				// run program
+		
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'r'}));},100);
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'r'}));},150);
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'u'}));},200);
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'u'}));},250);
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'n'}));},300);
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'n'}));},350);
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'Enter'}));},400);
+				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'Enter'}));},450);
+		
+			}
+			fileReader.readAsArrayBuffer(data);                    
+
+        
+		},
+		error: function(xhr, status, error) { alert("Error loading proggie ["+error+"]"); }
 	});
 }
 

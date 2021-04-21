@@ -9,12 +9,12 @@ class c64mmu
         this.char_in=false;
         this.io_in=false;
 
-        this.ram64k=new Array(65536);
-        this.cpustack=new Array(0x100);
-
         this.chargenROM=new Array();
         this.basicROM=new Array();
         this.kernalROM=new Array();
+
+        this.ram64k=new Array(65536);
+        this.cpustack=new Array(0x100);
 
         var ramPos=0;
         for (var i = 0; i < 512; i++)
@@ -134,9 +134,15 @@ class c64mmu
     readAddr(addr,fromVIC=false)
     {
         //addr&=0xffff;
-        if ((addr<0)||(addr>0xffff))
+        if (
+            (addr !== addr) // is NaN?
+            || (typeof addr !== "number")
+            || (addr !== Math.floor(addr))
+            || (addr < 0)
+            || (addr > 0xffff)
+          ) 
         {
-            alert("read::This should not happen!!! Addr is "+addr.toString(16));
+            alert("readAddr::Bad address");
         }
 
         if (fromVIC)
@@ -161,7 +167,8 @@ class c64mmu
         }
         else if (addr==0x0001)
         {
-            return ((this.dataDirReg & this.processorPortReg) | ((~this.dataDirReg) & 0x17))&0xff;
+            return this.processorPortReg&0xff;
+            //return ((this.dataDirReg & this.processorPortReg) | ((~this.dataDirReg) & 0x17))&0xff;
         }
         else if ((addr>=0x0002)&&(addr<=0xff))
         {
@@ -271,9 +278,15 @@ class c64mmu
     writeAddr(addr,value)
     {
         //addr&=0xffff;
-        if ((addr<0)||(addr>0xffff))
+        if (
+            (addr !== addr) // is NaN?
+            || (typeof addr !== "number")
+            || (addr !== Math.floor(addr))
+            || (addr < 0)
+            || (addr > 0xffff)
+          ) 
         {
-            alert("write::This should not happen!!! Addr is "+addr.toString(16));
+            alert("writeAddr::Bad address");
         }
 
         if (addr==0x0000)

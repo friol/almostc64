@@ -24,6 +24,7 @@ class cpu6510
 
         this.instructionTable[0x00]=[1,7,`BRK`];
         this.instructionTable[0x01]=[2,6,`ORA (%d,X)`];
+        this.instructionTable[0x03]=[2,8,`SLO (%d,X)`]; // undocumented
         this.instructionTable[0x05]=[2,3,`ORA %d`];
         this.instructionTable[0x06]=[2,5,`ASL %d`];
         this.instructionTable[0x07]=[2,5,`SLO %d`];
@@ -41,6 +42,8 @@ class cpu6510
         this.instructionTable[0x16]=[2,6,`ASL %d,X`];
         this.instructionTable[0x18]=[1,2,`CLC`];
         this.instructionTable[0x19]=[3,4,`ORA %d,Y`];
+        this.instructionTable[0x1A]=[1,2,`NOP`]; // undocumented
+        this.instructionTable[0x1C]=[3,4,`NOP %d,X`]; // undocumented
         this.instructionTable[0x1D]=[3,4,`ORA %d,X`];
         this.instructionTable[0x1E]=[3,7,`ASL %d,X`];
 
@@ -70,6 +73,7 @@ class cpu6510
 
         this.instructionTable[0x40]=[1,6,`RTI`];
         this.instructionTable[0x41]=[2,6,`EOR (%d,X)`];
+        this.instructionTable[0x44]=[2,3,`NOP %d`]; // undocumented
         this.instructionTable[0x45]=[2,3,`EOR %d`];
         this.instructionTable[0x46]=[2,5,`LSR %d`];
         this.instructionTable[0x48]=[1,3,`PHA`];
@@ -85,6 +89,7 @@ class cpu6510
         this.instructionTable[0x56]=[2,6,`LSR %d,X`];//*
         this.instructionTable[0x58]=[1,2,`CLI`];//*
         this.instructionTable[0x59]=[3,4,`EOR %d,Y`];//*
+        this.instructionTable[0x5A]=[1,2,`NOP`]; // undocumented
         this.instructionTable[0x5D]=[3,4,`EOR %d,X`];//*
         this.instructionTable[0x5E]=[3,7,`LSR %d,X`];//*
 
@@ -175,6 +180,7 @@ class cpu6510
 
         this.instructionTable[0xD0]=[2,2,`BNE %d`];//*
         this.instructionTable[0xD1]=[2,5,`CMP (%d),Y`];//*
+        this.instructionTable[0xD4]=[2,4,`NOP %d,X`]; // undocumented
         this.instructionTable[0xD5]=[2,4,`CMP %d,X`];
         this.instructionTable[0xD6]=[2,6,`DEC %d,X`];
         this.instructionTable[0xD8]=[1,2,`CLD`];
@@ -205,6 +211,7 @@ class cpu6510
         this.instructionTable[0xFC]=[3,4,`NOP %d`];
         this.instructionTable[0xFD]=[3,4,`SBC %d,X`];
         this.instructionTable[0xFE]=[3,7,`INC %d,X`];
+        this.instructionTable[0xFF]=[3,7,`ISC %d,X`]; // undocumented
     }
 
     powerUp()
@@ -592,6 +599,27 @@ class cpu6510
                 this.doFlagsNZ(this.a);            
                 break;
             }
+            case 0x03:
+            {
+                // SLO (zp,X) undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var iop = this.mmu.readAddr((operand+this.x)&0xff);
+
+                this.mmu.writeAddr(operand,(iop*2)&0xff);
+                this.a=this.a|((iop*2)&0xff);
+
+                if ((this.a & 0x80)==0x80) // FIXXX?
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);            
+                break;
+            }
             case 0x05:
             {
                 // ORA zeropage
@@ -808,6 +836,19 @@ class cpu6510
                 this.a |= iop;
                 this.doFlagsNZ(this.a);            
                 elapsedCycles+=this.pageCross(operand,this.y);
+                break;
+            }
+            case 0x1A:
+            {
+                // NOP undocumented
+                break;
+            }
+            case 0x1C:
+            {
+                // NOP absolute,X
+                var operand=this.mmu.readAddr16bit(this.pc+1);
+                var iop = this.mmu.readAddr((operand+this.x)&0xffff);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0x1D:
@@ -1207,6 +1248,11 @@ class cpu6510
                 this.doFlagsNZ(this.a);
                 break;
             }
+            case 0x44:
+            {
+                // NOP undocumented
+                break;
+            }
             case 0x45:
             {
                 // EOR zeropage
@@ -1387,6 +1433,11 @@ class cpu6510
                 this.a^=iop;
                 this.doFlagsNZ(this.a);
                 elapsedCycles+=this.pageCross(operand,this.y);
+                break;
+            }
+            case 0x5A:
+            {
+                // NOP undocumented
                 break;
             }
             case 0x5D:
@@ -1808,15 +1859,8 @@ class cpu6510
             {
                 // STA (indirect),Y
                 var operand=this.mmu.readAddr(this.pc+1);
-
-                if (operand==undefined)
-                {
-                    var wowo=0;
-                    alert("operand undefined in STA (indirect),Y");
-                }
-
                 var indi = this.mmu.readAddr16bit(operand);
-                this.mmu.writeAddr(indi+this.y,this.a);
+                this.mmu.writeAddr((indi+this.y)&0xffff,this.a);
                 break;
             }
             case 0x94:
@@ -2214,10 +2258,11 @@ class cpu6510
             {
                 // ASX or SBX, undocumented, X = A & X - #{imm}
                 var operand=this.mmu.readAddr(this.pc+1);
-                this.x=(this.a&this.x)-operand;
-                if (this.x<0) this.x&=0xff;
+                
+                const tmp = (this.a & this.x) - operand;
 
-                // this.flagsC ??? FIXXX
+                this.x = tmp & 0xff;
+                this.flagsC = (tmp >= 0) ? 1 : 0;
                 
                 this.doFlagsNZ(this.x);
                 break;
@@ -2273,6 +2318,13 @@ class cpu6510
                 else this.flagsC=0;
                 this.doFlagsNZ(this.a-finval);
                 elapsedCycles+=this.pageCross(indi,this.y);
+                break;
+            }
+            case 0xD4:
+            {
+                // NOP zeropage,X undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var opz=this.mmu.readAddr((operand+this.x)&0xff);
                 break;
             }
             case 0xD5:
@@ -2529,6 +2581,18 @@ class cpu6510
                 curval+=1;
                 if (curval>0xff) curval=0;
                 this.mmu.writeAddr(operand+this.x,curval);
+                this.doFlagsNZ(curval);
+                break;
+            }
+            case 0xFF:
+            {
+                // ISC absolute,X undocumented
+                var operand=this.mmu.readAddr16bit(this.pc+1);
+                var curval=this.mmu.readAddr(operand+this.x);
+                curval+=1;
+                if (curval>0xff) curval=0;
+                this.mmu.writeAddr(operand+this.x,curval);
+                this.doSbc(curval);
                 this.doFlagsNZ(curval);
                 break;
             }

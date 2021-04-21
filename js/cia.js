@@ -137,8 +137,8 @@ class cia
             }
         }
 
-        //return retByte;
-        return (retByte|(this.ciaportB&this.datadirregB))&0xff;
+        return retByte;
+        //return (retByte|(this.ciaportB&this.datadirregB))&0xff;
         //return (byte)((ret | (prb & ddrb)) & Joystick1);
     }
 
@@ -220,13 +220,12 @@ class cia
                     this.icr1 |= 0x80;
                 }
 
+                // always reload
+                this.timerA_dc04 = (this.timerAlatch & 0xff);
+                this.timerA_dc05 = ((this.timerAlatch>>8) & 0xff);
+
                 // must be retriggered?
-                if ((this.timerACtrl_dc0e & 0x08) == 0)
-                {
-                    this.timerA_dc04 = (this.timerAlatch & 0xff);
-                    this.timerA_dc05 = ((this.timerAlatch>>8) & 0xff);
-                }
-                else
+                if ((this.timerACtrl_dc0e & 0x08) != 0)
                 {
                     this.timerAisRunning = false;
                     this.timerACtrl_dc0e&=0xfe; // FIXXX?
@@ -258,13 +257,12 @@ class cia
                     this.icr1 |= 0x80;
                 }
 
+                // allways reload
+                this.timerB_dc06 = (this.timerBlatch & 0xff)&0xff;
+                this.timerB_dc07 = ((this.timerBlatch >> 8) & 0xff);
+
                 // must be retriggered?
-                if ((this.timerBCtrl_dc0f & 0x08) == 0)
-                {
-                    this.timerB_dc06 = (this.timerBlatch & 0xff)&0xff;
-                    this.timerB_dc07 = ((this.timerBlatch >> 8) & 0xff);
-                }
-                else
+                if ((this.timerBCtrl_dc0f & 0x08) != 0)
                 {
                     this.timerBisRunning = false;
                     this.timerBCtrl_dc0f&=0xfe; // FIXXX?
@@ -427,7 +425,7 @@ class cia
         else if ((addr==0xdc05)||(addr==0xdd05))
         {
             this.timerA_dc05=value;
-            this.timerAlatch|=(value<<8)&0xff00;
+            this.timerAlatch|=(value<<8);
             if ((this.timerACtrl_dc0e&1)==0)
             {
                 this.timerA_dc04=this.timerAlatch&0xff;
@@ -443,7 +441,7 @@ class cia
         else if ((addr==0xdc07)||(addr==0xdd07))
         {
             this.timerB_dc07=value;
-            this.timerBlatch|=(value<<8)&0xff00;
+            this.timerBlatch|=(value<<8);
             if ((this.controlReg2&1)==0)
             {
                 this.timerB_dc06=this.timerBlatch&0xff;

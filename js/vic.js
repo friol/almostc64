@@ -110,10 +110,12 @@ class vic
         this.rasterTicker += clocksElapsed;
 
         const framesPerSecond = 60;
-        const c64freq = 1022727;
+        
+        const c64freq = 1022727; // NTSC
+        //const c64freq = 985248 ; // PAL
+
         var changedRasterline=false;
 
-        //var c64frame = c64freq / framesPerSecond;
         var clocksPerRasterline = 63;
         if ((this.currentRasterLine>=this.yUpperBorderWidth)&&((this.currentRasterLine%8)==0)&&(this.currentRasterLine<(this.yUpperBorderWidth+200)))
         {
@@ -452,7 +454,7 @@ class vic
     // draw a rasterline of chars
     //
 
-    drawCharRasterline(cia2,mmu,curScanline)
+    drawCharRasterline(cia2,mmu,curScanline,isbg)
     {
         var extendedColorTextMode=false;
         if (this.screencontrol1_d011&0x40)
@@ -507,13 +509,13 @@ class vic
                     var cur2bits = (curbyte >> (6 - x)) & 0x03;
                     if (cur2bits<0x03)
                     {
-                        if ((this.spriteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]==0)||(cur2bits!=0)) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
-                        if ((this.spriteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]==0)||(cur2bits!=0)) this.byteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
+                        if ( ((isbg)&&((cur2bits==0)||(cur2bits==1))) || ((!isbg)&&((cur2bits!=0)&&(cur2bits!=1))) ) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
+                        if ( ((isbg)&&((cur2bits==0)||(cur2bits==1))) || ((!isbg)&&((cur2bits!=0)&&(cur2bits!=1))) ) this.byteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[cur2bits];
                     }
                     else
                     {
-                        this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=currentCharCol&7;
-                        this.byteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]=currentCharCol&7;
+                        if (!isbg) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=currentCharCol&7;
+                        if (!isbg) this.byteFrameBuffer[(chpx+x+1+xrasterscroll)+(curScanline*this.xResolutionTotal)]=currentCharCol&7;
                     }
                 }
             }
@@ -525,11 +527,12 @@ class vic
                     var curbit=(curbyte>>(7-x))&0x01;
                     if (curbit)
                     {
-                        this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=currentCharCol;
+                        if (!isbg) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=currentCharCol;
                     }
                     else
                     {
-                        if (this.spriteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]==0) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[bgColorNumber];
+                        //if (this.spriteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]==0) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[bgColorNumber];
+                        if (isbg) this.byteFrameBuffer[(chpx+x+xrasterscroll)+(curScanline*this.xResolutionTotal)]=this.backgroundColor[bgColorNumber];
                     }
                 }
             }
@@ -845,18 +848,19 @@ class vic
     // scanline renderer
     //
 
-    scanlineRenderer(canvasName,px,py,mmu,cia2)
+    scanlineRenderer(canvasName,px,py,mmu,cia2,slOverride=null)
     {
         var curScanline=this.currentRasterLine;
+        if (slOverride!=null)
+        {
+            curScanline=slOverride;
+        }
 
         var canvas = document.getElementById(canvasName);
         var ctx = canvas.getContext("2d");
 
         if ((this.screencontrol1_d011 & 0x10)!=0) // screen not blanked
         {
-            // background sprites
-            this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline,1);
-
             if ((this.screencontrol1_d011&0x20)==0)
             {
                 // are we in a border scanline?
@@ -869,8 +873,10 @@ class vic
                 }
                 else
                 {
-                    // draw inner area
-                    this.drawCharRasterline(cia2,mmu,curScanline);
+                    this.drawCharRasterline(cia2,mmu,curScanline,true);
+                    // background sprites
+                    this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline,1);
+                    this.drawCharRasterline(cia2,mmu,curScanline,false);
                 }
             }
             else
