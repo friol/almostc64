@@ -4,6 +4,9 @@ class cpu6510
 {
     constructor(theMmu)
     {
+        this.startLogging=false;
+        this.loggingCount=0;
+
         this.mmu=theMmu;
         this.mousePosx=0;
         this.mousePosy=0;
@@ -79,6 +82,7 @@ class cpu6510
         this.instructionTable[0x48]=[1,3,`PHA`];
         this.instructionTable[0x49]=[2,2,`EOR %d`];
         this.instructionTable[0x4A]=[1,2,`LSR`];
+        this.instructionTable[0x4B]=[2,2,`ALR %d`]; // undocumented
         this.instructionTable[0x4C]=[3,3,`JMP %d`];
         this.instructionTable[0x4D]=[3,4,`EOR %d`];
         this.instructionTable[0x4E]=[3,6,`LSR %d`];
@@ -148,6 +152,7 @@ class cpu6510
         this.instructionTable[0xAA]=[1,2,`TAX`];
         this.instructionTable[0xAC]=[3,4,`LDY %d`];
         this.instructionTable[0xAE]=[3,4,`LDX %d`];
+        this.instructionTable[0xAF]=[3,4,`LAX %d`]; // undocumented
         this.instructionTable[0xAD]=[3,4,`LDA %d`];
 
         this.instructionTable[0xB0]=[2,2,`BCS %d`];//*
@@ -156,6 +161,7 @@ class cpu6510
         this.instructionTable[0xB4]=[2,4,`LDY %d,X`];//*
         this.instructionTable[0xB5]=[2,4,`LDA %d,X`];//*
         this.instructionTable[0xB6]=[2,4,`LDX %d,Y`];//*
+        this.instructionTable[0xB7]=[1,2,`LAX %d`]; // undocumented
         this.instructionTable[0xB8]=[1,2,`CLV`];//*
         this.instructionTable[0xB9]=[3,4,`LDA %d,Y`];//*
         this.instructionTable[0xBA]=[1,2,`TSX`];//*
@@ -301,6 +307,27 @@ class cpu6510
             ctx.strokeRect(px,5-(fontSpace*3)+initialpy+Math.floor((this.mousePosy+initialpy)/fontSpace)*fontSpace, 512, fontSpace-2);
         }
 
+    }
+
+    traceLog()
+    {
+        var debugLog=this.pc.toString(16).padStart(4,'0')+" "+this.a.toString(16).padStart(2,'0')+" "+
+        this.x.toString(16).padStart(2,'0')+" "+this.y.toString(16).padStart(2,'0')+" "+this.sp.toString(16).padStart(4,'0')+" "+
+        this.getFlagsString();
+        //this.totCycles.toString(16);
+
+        if (this.startLogging==true)
+        {
+            this.loggingCount++;
+
+            //if ((this.loggingCount%100)==0)
+            //if ((this.loggingCount>=1050000)&&(this.loggingCount<1051000))
+            {
+                //if (this.totCycles==2) debugLog="fce2 00 00 00 00ff 0\n"+debugLog;
+                var ta=document.getElementById("logText");
+                ta.value+=debugLog+"\n";
+            }
+        }
     }
 
     runToCursor(initialpy,listOfOpcodes)
@@ -1321,6 +1348,27 @@ class cpu6510
                 this.doFlagsNZ(this.a);
                 break;
             }
+            case 0x4B:
+            {
+                // ALR immediate undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                this.a&=operand;
+
+                if ((this.a & 0x01)!=0)
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.a >>= 1;
+                this.a &= 0x7f;
+
+                this.doFlagsNZ(this.a);
+                break;
+            }
             case 0x4C:
             {
                 // JMP absolute
@@ -2015,6 +2063,16 @@ class cpu6510
                 this.doFlagsNZ(this.x);
                 break;
             }
+            case 0xAF:
+            {
+                // LAX absolute undocumented
+                var operand=this.mmu.readAddr16bit(this.pc+1);
+                var laxval=this.mmu.readAddr(operand);
+                this.a=laxval;
+                this.x=laxval;
+                this.doFlagsNZ(this.a);
+                break;
+            }
             case 0xb0:
             {
                 // BCS offset
@@ -2077,6 +2135,18 @@ class cpu6510
                 var operand=this.mmu.readAddr(this.pc+1);
                 this.x = this.mmu.readAddr((operand + this.y)&0xff);
                 this.doFlagsNZ(this.x);
+                break;
+            }
+            case 0xB7:
+            {
+                // LAX zeropage,y undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var zpval=this.mmu.readAddr((operand + this.y)&0xff);
+                
+                this.a=zpval;
+                this.x=zpval;
+                
+                this.doFlagsNZ(this.a);
                 break;
             }
             case 0xb8:
@@ -2621,17 +2691,7 @@ class cpu6510
         if ((this.sp>0xff)||(this.sp<0)) alert("Warning: sp out of bounds at "+this.pc.toString(16));
         if ((this.pc>0xffff)||(this.pc<0)) alert("Warning: pc out of bounds at "+this.pc.toString(16));
 
-        /*var debugLog=this.pc.toString(16).padStart(4,'0')+" "+this.a.toString(16).padStart(2,'0')+" "+
-        this.x.toString(16).padStart(2,'0')+" "+this.y.toString(16).padStart(2,'0')+" "+this.sp.toString(16).padStart(4,'0')+" "+
-        this.getFlagsString()+" "+
-        this.totCycles.toString(16);
-
-        if ((this.totCycles>=1000)&&(this.totCycles<10000))
-        {
-            //if (this.totCycles==2) debugLog="fce2 00 00 00 00ff 0\n"+debugLog;
-            var ta=document.getElementById("logText");
-            ta.value+=debugLog+"\n";
-        }*/
+        //this.traceLog();
 
         return elapsedCycles;
     }

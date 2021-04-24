@@ -393,7 +393,8 @@ function startupFunction()
 			}
 			else if (globalEmuStatus==1)
 			{
-				while ((cpu.totCycles-globalOldCyc)<(16666))
+				//while ((cpu.totCycles-globalOldCyc)<(16666))
+				while ((cpu.totCycles-globalOldCyc)<(19656))
 				{
 					var elcyc=cpu.executeOneOpcode();			
 					ciaChip1.update(elcyc,cpu);
@@ -404,16 +405,20 @@ function startupFunction()
 					{
 						// draw previous line
 						vicChip.scanlineRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
+						if (vicChip.currentRasterLine==0)
+						{
+							vicChip.blit("mainCanvass",0,0);
+						}
 					}
 
-					/*if (cpu.pc==0x819)
+					/*if ((cpu.startLogging==false)&&(cpu.pc==0x812))
 					{
+						//cpu.startLogging=true;
+						//cpu.traceLog();
 						globalEmuStatus=0;
 						break;
 					}*/
-				}			
-
-				//vicChip.simpleRenderer("mainCanvass",0,0,glbMMU,ciaChip2);
+				}	
 
 				globalOldCyc=cpu.totCycles;
 			}

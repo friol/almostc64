@@ -4,14 +4,9 @@ class vic
 {
     constructor()
     {
-        this.debugShifter=0;
-
+        //this.debugShifter=0;
         this.imgData=undefined;
         this.canvasRenderer=undefined;
-
-        this.rasterTicker=0;
-        this.currentRasterLine=0;
-        this.rasterLines = 294;
 
         this.controlreg2_d016=0;
         this.memoryControlReg_d018=0;
@@ -28,10 +23,15 @@ class vic
 
         this.foregroundColor=14;
 
+        this.rasterTicker=0;
+        this.currentRasterLine=0;
+        this.rasterLines = 312; // PAL C64
+
         this.xResolutionTotal=402;
-        this.yResolutionTotal=292;
-        this.xLeftBorderWidth=46;
-        this.yUpperBorderWidth=43;
+        this.yResolutionTotal=284;
+        this.xLeftBorderWidth=41;
+        this.yUpperBorderWidth=36;
+        this.vblankWidth=14;
 
         this.charmodeNumxchars=40;
         this.charmodeNumychars=25;
@@ -109,15 +109,14 @@ class vic
     {
         this.rasterTicker += clocksElapsed;
 
-        const framesPerSecond = 60;
-        
-        const c64freq = 1022727; // NTSC
+        //const framesPerSecond = 60;
+        //const c64freq = 1022727; // NTSC
         //const c64freq = 985248 ; // PAL
 
         var changedRasterline=false;
 
         var clocksPerRasterline = 63;
-        if ((this.currentRasterLine>=this.yUpperBorderWidth)&&((this.currentRasterLine%8)==0)&&(this.currentRasterLine<(this.yUpperBorderWidth+200)))
+        if ((this.currentRasterLine>=this.yUpperBorderWidth+this.vblankWidth)&&((this.currentRasterLine%8)==0)&&(this.currentRasterLine<(this.yUpperBorderWidth+200+this.vblankWidth)))
         {
             // bad line
             clocksPerRasterline=23;
@@ -352,11 +351,11 @@ class vic
         }
         else if (addr == 0xD013)
         {
-            return 0x00; // FIXXX light pen x
+            return 213; // FIXXX light pen x
         }
         else if (addr == 0xD014)
         {
-            return 0x00; // FIXXX light pen y
+            return 120; // FIXXX light pen y
         }
         else if (addr==0xd015)
         {
@@ -476,10 +475,13 @@ class vic
 
         var mempos = (((this.memoryControlReg_d018 >> 1) & 0x07) * 0x800) | realvicbank;
 
-        var row=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2))/8);
+        //var row=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2))/8);
+        var row=Math.floor((curScanline-this.yUpperBorderWidth)/8);
+        if (row<0) return;
         var chpx=this.xLeftBorderWidth;
         var chpy=curScanline;
-        var y=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2)))%8;
+        //var y=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2)))%8;
+        var y=Math.floor(curScanline-this.yUpperBorderWidth)%8;
 
         // inner area
         for (var xpos=0;xpos<(this.charmodeNumxchars);xpos++)
@@ -571,8 +573,8 @@ class vic
 
         var colorRamPos=0;
 
-        var row=Math.floor((scanLine-Math.floor((this.rasterLines-200)/2))/8);
-        var yshift=Math.floor((scanLine-Math.floor((this.rasterLines-200)/2)))%8;
+        var row=Math.floor((scanLine-this.yUpperBorderWidth)/8);
+        var yshift=Math.floor((scanLine-this.yUpperBorderWidth))%8;
 
         basecoladdr+=row*40;
         baseaddr+=((row*40)*8)+(yshift);
@@ -660,12 +662,12 @@ class vic
     drawSprites(chpx,chpy,mmu,cia2,curScanline,priorityVal)
     {
         chpx-=24;
-        chpy-=46;
+        chpy-=50;
 
         var vicbank = cia2.cia2getVICbank();
         var vicBaseAddr = (3-vicbank) * 0x4000;
         var vicscreenMemoryAddr = (((this.memoryControlReg_d018 >> 4) & 0x0f) * 0x400);
-        var spritePointers=vicBaseAddr+vicscreenMemoryAddr+0x3f8;
+        var spritePointers=vicBaseAddr+vicscreenMemoryAddr+(1024-8);
 
         var colArray=new Array(4);
 
@@ -851,87 +853,94 @@ class vic
     scanlineRenderer(canvasName,px,py,mmu,cia2,slOverride=null)
     {
         var curScanline=this.currentRasterLine;
+
+        if ((curScanline<this.vblankWidth)||(curScanline>=(284+this.vblankWidth))) return;
+
         if (slOverride!=null)
         {
             curScanline=slOverride;
         }
-
-        var canvas = document.getElementById(canvasName);
-        var ctx = canvas.getContext("2d");
 
         if ((this.screencontrol1_d011 & 0x10)!=0) // screen not blanked
         {
             if ((this.screencontrol1_d011&0x20)==0)
             {
                 // are we in a border scanline?
-                if ( (curScanline<Math.floor((this.rasterLines-200)/2)) || (curScanline>=(Math.floor((this.rasterLines-200)/2)+200)) )
+                if ( (curScanline<(this.yUpperBorderWidth+this.vblankWidth)) || (curScanline>=(this.yUpperBorderWidth+this.vblankWidth+200)) )
                 {
-                    for (var p=(this.xResolutionTotal*curScanline);p<(this.xResolutionTotal*(curScanline+1));p++)            
+                    for (var p=(this.xResolutionTotal*(curScanline-this.vblankWidth));p<(this.xResolutionTotal*(curScanline-this.vblankWidth+1));p++)            
                     {
                         this.byteFrameBuffer[p]=this.foregroundColor;
                     }
                 }
                 else
                 {
-                    this.drawCharRasterline(cia2,mmu,curScanline,true);
+                    this.drawCharRasterline(cia2,mmu,curScanline-this.vblankWidth,true);
                     // background sprites
-                    this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline,1);
-                    this.drawCharRasterline(cia2,mmu,curScanline,false);
+                    this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline-this.vblankWidth,1);
+                    this.drawCharRasterline(cia2,mmu,curScanline-this.vblankWidth,false);
                 }
             }
             else
             {
                 // bitmap mood
-                if ( (curScanline>=Math.floor((this.rasterLines-200)/2)) && (curScanline<(Math.floor((this.rasterLines-200)/2)+200)) )
+                if ( (curScanline>=(this.yUpperBorderWidth+this.vblankWidth)) && (curScanline<(this.yUpperBorderWidth+this.vblankWidth+200)) )
                 {
-                    this.drawBitmapScreenRasterline(mmu,cia2,curScanline);
+                    this.drawBitmapScreenRasterline(mmu,cia2,curScanline-this.vblankWidth);
                 }
             }
 
             // foreground sprites
-            this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline,0);
+            this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline-this.vblankWidth,0);
         }
         else
         {
             // screen blanked
-            for (var p=(this.xResolutionTotal*curScanline);p<(this.xResolutionTotal*(curScanline+1));p++)            
+            for (var p=(this.xResolutionTotal*(curScanline-this.vblankWidth));p<(this.xResolutionTotal*(curScanline-this.vblankWidth+1));p++)            
             {
                 this.byteFrameBuffer[p]=this.foregroundColor;
             }
         }
+    }
 
-        if (curScanline==(this.rasterLines-1))
+    //
+    // blitter
+    //
+
+    blit(canvasName,px,py)
+    {
+        // report framebuffer data on RGBA framebuffer
+
+        var canvas = document.getElementById(canvasName);
+        var ctx = canvas.getContext("2d");
+
+        var pos=0;
+        for (var p=0;p<(this.xResolutionTotal*this.yResolutionTotal);p++)
         {
-            // report framebuffer data on RGBA framebuffer
-
-            var pos=0;
-            for (var p=0;p<(this.xResolutionTotal*this.yResolutionTotal);p++)
-            {
-                this.frameBuffer[pos]=this.c64palette[(this.byteFrameBuffer[p]*3)+0];
-                this.frameBuffer[pos+1]=this.c64palette[(this.byteFrameBuffer[p]*3)+1];
-                this.frameBuffer[pos+2]=this.c64palette[(this.byteFrameBuffer[p]*3)+2];
-                this.frameBuffer[pos+3]=255;
-                pos+=4;
-            }
-
-            // clear spr-spr collision framebuffer
-            for (var i=0;i<this.xResolutionTotal*this.yResolutionTotal;i++)
-            {
-                this.spriteFrameBuffer[i]=0;            
-            }
-
-            // spit it all out
-            if (this.imgData==undefined) this.imgData = ctx.getImageData(0, 0, this.xResolutionTotal, this.yResolutionTotal);
-            this.imgData.data.set(this.frameBuffer);
-
-            if (this.canvasRenderer==undefined)
-            {
-                this.canvasRenderer = document.createElement('canvas');
-                this.canvasRenderer.width = this.imgData.width;
-                this.canvasRenderer.height = this.imgData.height;
-            }
-            this.canvasRenderer.getContext('2d').putImageData(this.imgData, 0, 0);
-            ctx.drawImage(this.canvasRenderer, px,py, this.xResolutionTotal, this.yResolutionTotal);
+            this.frameBuffer[pos]=this.c64palette[(this.byteFrameBuffer[p]*3)+0];
+            this.frameBuffer[pos+1]=this.c64palette[(this.byteFrameBuffer[p]*3)+1];
+            this.frameBuffer[pos+2]=this.c64palette[(this.byteFrameBuffer[p]*3)+2];
+            this.frameBuffer[pos+3]=255;
+            pos+=4;
         }
+
+        // clear spr-spr collision framebuffer
+        for (var i=0;i<this.xResolutionTotal*this.yResolutionTotal;i++)
+        {
+            this.spriteFrameBuffer[i]=0;            
+        }
+
+        // spit it all out
+        if (this.imgData==undefined) this.imgData = ctx.getImageData(0, 0, this.xResolutionTotal, this.yResolutionTotal);
+        this.imgData.data.set(this.frameBuffer);
+
+        if (this.canvasRenderer==undefined)
+        {
+            this.canvasRenderer = document.createElement('canvas');
+            this.canvasRenderer.width = this.imgData.width;
+            this.canvasRenderer.height = this.imgData.height;
+        }
+        this.canvasRenderer.getContext('2d').putImageData(this.imgData, 0, 0);
+        ctx.drawImage(this.canvasRenderer, px,py, this.xResolutionTotal, this.yResolutionTotal);
     }
 }

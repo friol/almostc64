@@ -133,7 +133,6 @@ class c64mmu
 
     readAddr(addr,fromVIC=false)
     {
-        //addr&=0xffff;
         if (
             (addr !== addr) // is NaN?
             || (typeof addr !== "number")
@@ -142,8 +141,10 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            alert("readAddr::Bad address");
+            //alert("readAddr::Bad address ["+addr+"]");
         }
+
+        addr&=0xffff;
 
         if (fromVIC)
         {
@@ -277,7 +278,6 @@ class c64mmu
 
     writeAddr(addr,value)
     {
-        //addr&=0xffff;
         if (
             (addr !== addr) // is NaN?
             || (typeof addr !== "number")
@@ -286,8 +286,9 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            alert("writeAddr::Bad address");
+            //alert("writeAddr::Bad address ["+addr+"]");
         }
+        addr&=0xffff;
 
         if (addr==0x0000)
         {
