@@ -28,6 +28,7 @@ class cpu6510
         this.instructionTable[0x00]=[1,7,`BRK`];
         this.instructionTable[0x01]=[2,6,`ORA (%d,X)`];
         this.instructionTable[0x03]=[2,8,`SLO (%d,X)`]; // undocumented
+        this.instructionTable[0x04]=[2,3,`NOP %d`]; // undocumented
         this.instructionTable[0x05]=[2,3,`ORA %d`];
         this.instructionTable[0x06]=[2,5,`ASL %d`];
         this.instructionTable[0x07]=[2,5,`SLO %d`];
@@ -38,17 +39,23 @@ class cpu6510
         this.instructionTable[0x0C]=[3,4,`NOP %d`]; // undocumented
         this.instructionTable[0x0D]=[3,4,`ORA %d`];
         this.instructionTable[0x0E]=[3,6,`ASL %d`];
+        this.instructionTable[0x0F]=[3,6,`SLO %d`]; // undocumented
 
         this.instructionTable[0x10]=[2,2,`BPL %d`];
         this.instructionTable[0x11]=[2,5,`ORA (%d),Y`];
+        this.instructionTable[0x13]=[2,8,`SLO (%d),Y`]; // undocumented
+        this.instructionTable[0x14]=[2,4,`NOP %d,X`]; // undocumented
         this.instructionTable[0x15]=[2,4,`ORA %d,X`];
         this.instructionTable[0x16]=[2,6,`ASL %d,X`];
+        this.instructionTable[0x17]=[2,6,`SLO %d,X`]; // undocumented
         this.instructionTable[0x18]=[1,2,`CLC`];
         this.instructionTable[0x19]=[3,4,`ORA %d,Y`];
         this.instructionTable[0x1A]=[1,2,`NOP`]; // undocumented
+        this.instructionTable[0x1B]=[3,7,`SLO %d,Y`]; // undocumented
         this.instructionTable[0x1C]=[3,4,`NOP %d,X`]; // undocumented
         this.instructionTable[0x1D]=[3,4,`ORA %d,X`];
         this.instructionTable[0x1E]=[3,7,`ASL %d,X`];
+        this.instructionTable[0x1F]=[3,7,`SLO %d,X`]; // undocumented
 
         this.instructionTable[0x20]=[3,6,`JSR %d`];
         this.instructionTable[0x21]=[2,6,`AND %d`];
@@ -397,8 +404,16 @@ class cpu6510
 
     calcPagecrossPenalty2(address,oldPc)
     {
-        if (((address ^ oldPc) & 0xff00)!=0)
+        /*if (((address ^ oldPc) & 0xff00)!=0)
         {
+            return 1;
+        }*/
+
+        var newaddr=oldPc+2;
+
+        if ((address>>8)!=(newaddr>>8)) 
+        {
+            //console.log("Branch penalty ["+(address>>8).toString(16)+"] ["+(oldPc>>8).toString(16)+"]");
             return 1;
         }
 
@@ -535,46 +550,51 @@ class cpu6510
         }
     }
 
+    irqNmiJump(jumpto)
+    {
+        this.mmu.writeAddr(0x100 | this.sp,((this.pc >> 8) & 0xff));
+        this.sp--;
+        if (this.sp<0) this.sp=0xff;
+        this.mmu.writeAddr(0x100 | this.sp,((this.pc & 0xff)));
+        this.sp--;
+        if (this.sp<0) this.sp=0xff;
+
+        var tmp = 0x20;
+        if (this.flagsN) tmp |= 0x80;
+        if (this.flagsV) tmp |= 0x40;
+        //if (this.flagsB) tmp |= 0x10; // FIXXX?
+        if (this.flagsD) tmp |= 0x08;
+        if (this.flagsI) tmp |= 0x04;
+        if (this.flagsZ) tmp |= 0x02;
+        if (this.flagsC) tmp |= 0x01;
+
+        this.mmu.writeAddr(0x100 | this.sp, tmp);
+        this.sp--;
+        if (this.sp<0) this.sp=0xff;
+
+        this.flagsI=1;
+
+        this.pc = this.mmu.readAddr16bit(jumpto);
+    }
+
     executeOneOpcode()
     {
         var elapsedCycles=0;
 
         if (this.nmiPending||this.vicIrqPending||this.ciaIrqPending)
         {
-            if (this.flagsI==0)
+            if (this.nmiPending) 
             {
-                var jumpto = 0xfffe;
+                this.nmiPending=false;
+                this.irqNmiJump(0xfffa);
+                elapsedCycles+=7;
+            }
+            else if (this.flagsI==0)
+            {
                 if (this.ciaIrqPending) this.ciaIrqPending=false;
                 if (this.vicIrqPending) this.vicIrqPending=false;
-                if (this.nmiPending) 
-                {
-                    jumpto=0xfffa;
-                    this.nmiPending=false;
-                }
 
-                this.mmu.writeAddr(0x100 | this.sp,((this.pc >> 8) & 0xff));
-                this.sp--;
-                if (this.sp<0) this.sp=0xff;
-                this.mmu.writeAddr(0x100 | this.sp,((this.pc & 0xff)));
-                this.sp--;
-                if (this.sp<0) this.sp=0xff;
-
-                var tmp = 0x20;
-                if (this.flagsN) tmp |= 0x80;
-                if (this.flagsV) tmp |= 0x40;
-                //if (this.flagsB) tmp |= 0x10; // FIXXX?
-                if (this.flagsD) tmp |= 0x08;
-                if (this.flagsI) tmp |= 0x04;
-                if (this.flagsZ) tmp |= 0x02;
-                if (this.flagsC) tmp |= 0x01;
-
-                this.mmu.writeAddr(0x100 | this.sp, tmp);
-                this.sp--;
-                if (this.sp<0) this.sp=0xff;
-
-                this.flagsI=1; 
-
-                this.pc = this.mmu.readAddr16bit(jumpto);
+                this.irqNmiJump(0xfffe);
                 elapsedCycles+=7;
             }
         }
@@ -645,6 +665,11 @@ class cpu6510
                 }
 
                 this.doFlagsNZ(this.a);            
+                break;
+            }
+            case 0x04:
+            {
+                // NOP zeropage undocumented
                 break;
             }
             case 0x05:
@@ -793,6 +818,27 @@ class cpu6510
                 this.doFlagsNZ(loccontent&0xff);
                 break;
             }
+            case 0x0F:
+            {
+                // SLO absolute undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var iop = this.mmu.readAddr(operand&0xff);
+
+                this.mmu.writeAddr(operand,(iop*2)&0xff);
+                this.a=this.a|((iop*2)&0xff);
+
+                if ((this.a & 0x80)==0x80) // FIXXX?
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a); 
+                break;
+            }
             case 0x10:
             {
                 // BPL relative (Branch if Positive)
@@ -804,6 +850,8 @@ class cpu6510
 
                     var newaddr = this.pc + 2 + branchAmount;
                     elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
+
+                    //console.log("BPL::oldPc ["+oldPc.toString(16)+"] newaddr ["+newaddr.toString(16)+"]");
 
                     this.pc+=branchAmount+2;
                     jumped=true;
@@ -819,6 +867,35 @@ class cpu6510
                 this.a|=this.mmu.readAddr(finalAddress);
                 this.doFlagsNZ(this.a);
                 elapsedCycles+=this.pageCross(address,this.y);
+                break;
+            }
+            case 0x13:
+            {
+                // SLO (operand),Y undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var address=this.mmu.readAddr16bit(operand);
+                var finalAddress=(address+this.y)&0xffff;
+
+                var iop=this.mmu.readAddr(finalAddress);
+
+                this.mmu.writeAddr(finalAddress,(iop*2)&0xff);
+                this.a=this.a|((iop*2)&0xff);
+
+                if ((this.a & 0x80)==0x80) // FIXXX?
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);
+                break;
+            }
+            case 0x14:
+            {
+                // NOP zeropage,X undocumented
                 break;
             }
             case 0x15:
@@ -849,6 +926,27 @@ class cpu6510
                 this.doFlagsNZ(loccontent&0xff);
                 break;
             }
+            case 0x17:
+            {
+                // SLO zeropage,X undocumented
+                var operand=this.mmu.readAddr(this.pc+1);
+                var iop = this.mmu.readAddr((operand+this.x)&0xff);
+
+                this.mmu.writeAddr(operand,(iop*2)&0xff);
+                this.a=this.a|((iop*2)&0xff);
+
+                if ((this.a & 0x80)==0x80) // FIXXX?
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);
+                break;
+            }
             case 0x18:
             {
                 // CLC
@@ -868,6 +966,27 @@ class cpu6510
             case 0x1A:
             {
                 // NOP undocumented
+                break;
+            }
+            case 0x1B:
+            {
+                // SLO abs,Y undocumented
+                var operand=this.mmu.readAddr16bit(this.pc+1);
+                var iop = this.mmu.readAddr((operand+this.y)&0xffff);
+
+                this.mmu.writeAddr(operand,(iop*2)&0xff);
+                this.a=this.a|((iop*2)&0xff);
+
+                if ((this.a & 0x80)==0x80) // FIXXX?
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);
                 break;
             }
             case 0x1C:
@@ -905,6 +1024,27 @@ class cpu6510
                 loccontent <<= 1;
                 this.mmu.writeAddr(operand+this.x,loccontent&0xff);
                 this.doFlagsNZ(loccontent&0xff);
+                break;
+            }
+            case 0x1F:
+            {
+                // SLO abs,X undocumented
+                var operand=this.mmu.readAddr16bit(this.pc+1);
+                var iop = this.mmu.readAddr((operand+this.x)&0xffff);
+
+                this.mmu.writeAddr(operand,(iop*2)&0xff);
+                this.a=this.a|((iop*2)&0xff);
+
+                if ((this.a & 0x80)==0x80) // FIXXX?
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);
                 break;
             }
             case 0x20:
@@ -2691,7 +2831,7 @@ class cpu6510
         if ((this.sp>0xff)||(this.sp<0)) alert("Warning: sp out of bounds at "+this.pc.toString(16));
         if ((this.pc>0xffff)||(this.pc<0)) alert("Warning: pc out of bounds at "+this.pc.toString(16));
 
-        //this.traceLog();
+        this.traceLog();
 
         return elapsedCycles;
     }

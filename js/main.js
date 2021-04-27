@@ -393,7 +393,6 @@ function startupFunction()
 			}
 			else if (globalEmuStatus==1)
 			{
-				//while ((cpu.totCycles-globalOldCyc)<(16666))
 				while ((cpu.totCycles-globalOldCyc)<(19656))
 				{
 					var elcyc=cpu.executeOneOpcode();			
@@ -411,12 +410,12 @@ function startupFunction()
 						}
 					}
 
-					/*if ((cpu.startLogging==false)&&(cpu.pc==0x812))
+					/*if ((cpu.startLogging==false)&&(cpu.pc==0x8B1))
 					{
-						//cpu.startLogging=true;
-						//cpu.traceLog();
-						globalEmuStatus=0;
-						break;
+						cpu.startLogging=true;
+						cpu.traceLog();
+						//globalEmuStatus=0;
+						//break;
 					}*/
 				}	
 

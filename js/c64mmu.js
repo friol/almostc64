@@ -41,7 +41,7 @@ class c64mmu
 
         var thisInstance=this;
         $.ajax({
-            url: "roms/characters.901225-01.bin",type: "GET",processData: false,dataType: "binary",
+            url: "roms/Char.rom",type: "GET",processData: false,dataType: "binary",
             success: function(data) 
             {
                 var arrayBuffer;
@@ -56,7 +56,7 @@ class c64mmu
                     }
 
                     $.ajax({
-                        url: "roms/basic.901226-01.bin",type: "GET",processData: false,dataType: "binary",
+                        url: "roms/Basic.rom",type: "GET",processData: false,dataType: "binary",
                         success: function(data) 
                         {
                             var arrayBuffer;
@@ -71,7 +71,7 @@ class c64mmu
                                 }
 
                                 $.ajax({
-                                    url: "roms/kernal.901227-03.bin",type: "GET",processData: false,dataType: "binary",
+                                    url: "roms/Kernal.rom",type: "GET",processData: false,dataType: "binary",
                                     success: function(data) 
                                     {
                                         var arrayBuffer;
@@ -272,7 +272,7 @@ class c64mmu
     readAddr16bit(addr)
     {
         //console.log("Warning: 16bit CPU read");
-        //if (addr<=0xff) return (this.readAddr(addr)+(this.readAddr((addr+1)&0xff)<<8));
+        if (addr<=0xff) return (this.readAddr(addr)+(this.readAddr((addr+1)&0xff)<<8));
         return (this.readAddr(addr)|(this.readAddr(addr+1)<<8))&0xffff;
     }
 

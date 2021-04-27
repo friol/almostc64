@@ -200,6 +200,8 @@ class cia
 
     update(elapsedCycles,theCpu)
     {
+        var timerAunderflow=false;
+
         this.ciatod.update(elapsedCycles);
 
         if (this.timerAisRunning)
@@ -211,6 +213,8 @@ class cia
             timerVal -= elapsedCycles;
             if (timerVal <= 0)
             {
+                timerAunderflow=true;
+
                 this.icr1 |= 0x01;
                 if ((this.irqControlReg_dc0d & 0x01) == 0x01)
                 {
@@ -246,7 +250,23 @@ class cia
             var timerHigh = this.timerB_dc07;
             var timerVal = timerLow | (timerHigh << 8);
 
-            timerVal -= elapsedCycles;
+            if (((this.controlReg2&0x60)>>5)==0)
+            {
+                timerVal -= elapsedCycles;
+            }
+            else if (((this.controlReg2&0x60)>>5)==2)
+            {
+                // watch if timer A underflowed
+                if (timerAunderflow)
+                {
+                    timerVal--;
+                }
+            }
+            else
+            {
+                // handle other cases TODO
+            }
+
             if (timerVal <= 0)
             {
                 this.icr1 |= 0x02;
@@ -540,15 +560,10 @@ class cia
         else if ((addr==0xdc0f)||(addr==0xdd0f))
         {
             this.controlReg2=value&0xef;
+            console.log("CIA "+this.ciaId.toString()+"::wrote to control reg Dx0f "+value.toString(2));
 
-            if ((this.controlReg2 & 0x01) == 0x01)
-            {
-                this.timerBisRunning = true;
-            }
-            else
-            {
-                this.timerBisRunning = false;
-            }
+            if ((this.controlReg2 & 0x01) == 0x01) this.timerBisRunning = true;
+            else this.timerBisRunning = false;
         }
         else
         {

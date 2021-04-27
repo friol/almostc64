@@ -852,7 +852,8 @@ class vic
 
     scanlineRenderer(canvasName,px,py,mmu,cia2,slOverride=null)
     {
-        var curScanline=this.currentRasterLine;
+        var curScanline=this.currentRasterLine-1;
+        if (curScanline<0) curScanline=this.rasterLines-1;
 
         if ((curScanline<this.vblankWidth)||(curScanline>=(284+this.vblankWidth))) return;
 
