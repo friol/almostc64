@@ -184,8 +184,9 @@ class vic
 
         if ((addr>=0xd000)&&(addr<=0xd00f))
         {
-            if ((addr%2)==0) this.spritePositionsX[(addr&0x0f)/2]=value;
-            else this.spritePositionsY[((addr&0x0f)-1)/2]=value;
+            //console.log("VIC::write ["+value+"] to reg ["+addr.toString(16)+"]");
+            if ((addr%2)==0) this.spritePositionsX[(addr&0x0f)>>1]=value;
+            else this.spritePositionsY[((addr&0x0f)-1)>>1]=value;
         }
         else if (addr==0xd010)
         {
@@ -330,8 +331,8 @@ class vic
         if ((addr >= 0xD000) && (addr <= 0xD00F))
         {
             // sprite 0-7 x and y position, lower bits
-            if ((addr%2)==0) return this.spritePositionsX[(addr&0x0f)/2];
-            else return this.spritePositionsY[((addr&0x0f)-1)/2];
+            if ((addr%2)==0) return this.spritePositionsX[(addr&0x0f)>>1];
+            else return this.spritePositionsY[((addr&0x0f)-1)>>1];
         }
         else if (addr==0xd010)
         {

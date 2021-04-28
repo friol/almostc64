@@ -228,7 +228,7 @@ function startupFunction()
 		else if (e.key=="PageUp")
 		{
 			// step n debugger steps
-			for (var i=0;i<300;i++)
+			while (cpu.pc!=0x8af)
 			{
 				var elcyc=cpu.executeOneOpcode();			
 				ciaChip1.update(elcyc,cpu);
@@ -388,8 +388,9 @@ function startupFunction()
 
 				for (var i=0;i<=294;i++)
 				{
-					vicChip.scanlineRenderer("mainCanvass",380,140,glbMMU,ciaChip2,i);
+					vicChip.scanlineRenderer("mainCanvass",380,180,glbMMU,ciaChip2,i);
 				}
+				vicChip.blit("mainCanvass",380,180);
 			}
 			else if (globalEmuStatus==1)
 			{
@@ -410,13 +411,13 @@ function startupFunction()
 						}
 					}
 
-					/*if ((cpu.startLogging==false)&&(cpu.pc==0x8B1))
+					if ((cpu.startLogging==false)&&(cpu.pc==0x80d))
 					{
 						cpu.startLogging=true;
-						cpu.traceLog();
-						//globalEmuStatus=0;
-						//break;
-					}*/
+						//cpu.traceLog();
+						globalEmuStatus=0;
+						break;
+					}
 				}	
 
 				globalOldCyc=cpu.totCycles;

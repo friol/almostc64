@@ -32,8 +32,8 @@ class c64mmu
         this.ciaChip2=ciaChip2;
         this.sidChip=sidChip;
 
-        this.dataDirReg=0x2f;
-        this.processorPortReg=0x37;
+        this.dataDirReg=0x0;
+        this.processorPortReg=0x0;
         this.setProcessorPortConfig();
 
         // load chargen, basic and kernal roms
@@ -114,8 +114,23 @@ class c64mmu
 
     setProcessorPortConfig()
     {
-        var port = (~this.dataDirReg | this.processorPortReg)&0xff;
+        var port = ((~this.dataDirReg) | (this.processorPortReg&0x7))&0xff;
 
+        /*console.log("pport conf: ["+this.dataDirReg.toString(16)+"] ["+this.processorPortReg.toString(16)+"]")
+        */
+/*
+        if ( ((port & 7) == 3) || ((port & 7) == 7)) this.basic_in=true;
+        else this.basic_in=false;
+        
+        if ( ((port & 7) == 2) || ((port & 7) == 3) || ((port & 7) == 6) || ((port & 7) == 7)) this.kernal_in=true;
+        else this.kernal_in=false;
+
+        if ( ((port & 7) == 1) || ((port & 7) == 2) || ((port & 7) == 3)) this.char_in=true;
+        else this.char_in=false;
+
+        if ( ((port & 7) == 5) || ((port & 7) == 6) || ((port & 7) == 7)) this.io_in = true;
+        else this.io_in = false;
+*/
         if ((port & 3) == 3) this.basic_in=true;
         else this.basic_in=false;
 
@@ -126,7 +141,7 @@ class c64mmu
         else this.char_in=false;
 
         if (((port & 3) != 0) && ((port & 4) != 0)) this.io_in = true;
-        else this.io_in = false;
+        else this.io_in = false;        
     }    
 
     //
@@ -141,7 +156,7 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            //alert("readAddr::Bad address ["+addr+"]");
+            alert("readAddr::Bad address ["+addr+"]");
         }
 
         addr&=0xffff;
@@ -168,8 +183,8 @@ class c64mmu
         }
         else if (addr==0x0001)
         {
-            return this.processorPortReg&0xff;
-            //return ((this.dataDirReg & this.processorPortReg) | ((~this.dataDirReg) & 0x17))&0xff;
+            //return this.processorPortReg&0xff;
+            return ((this.dataDirReg & this.processorPortReg) | ((~this.dataDirReg) & 0x17))&0xff;
         }
         else if ((addr>=0x0002)&&(addr<=0xff))
         {
@@ -208,19 +223,7 @@ class c64mmu
         }        
         else if ((addr >= 0xd000) && (addr <= 0xdfff))
         {
-            if (!this.io_in)
-            {
-                if (!this.char_in)
-                {
-                    return this.ram64k[addr];
-                }
-                else
-                {
-                    // character rom
-                    return this.chargenROM[addr - 0xd000];
-                }
-            }
-            else
+            if (this.io_in)
             {
                 // I/O area
                 if ((addr>=0xdc00)&&(addr<=0xdcff))
@@ -240,12 +243,25 @@ class c64mmu
                 else if ((addr>=0xd800)&&(addr<=0xdbff))
                 {
                     // color RAM
+                    //(color_ram[adr & 0x03ff] & 0x0f | TheVIC.LastVICByte & 0xf0)
                     return ((this.ram64k[addr]&0x0f)|(this.lastVICbyte&0xf0));
                 }                
                 else if ((addr>=0xd000)&&(addr<=0xd3ff))
                 {
                     this.lastVICbyte=this.vicChip.readVICRegister(addr);
                     return this.lastVICbyte;
+                }
+            }
+            else 
+            {
+                if (this.char_in)
+                {
+                    // character rom
+                    return this.chargenROM[addr - 0xd000];
+                }
+                else
+                {
+                    return this.ram64k[addr];
                 }
             }
         }        
@@ -272,8 +288,8 @@ class c64mmu
     readAddr16bit(addr)
     {
         //console.log("Warning: 16bit CPU read");
-        if (addr<=0xff) return (this.readAddr(addr)+(this.readAddr((addr+1)&0xff)<<8));
-        return (this.readAddr(addr)|(this.readAddr(addr+1)<<8))&0xffff;
+        //if (addr<=0xff) return (this.readAddr(addr)+(this.readAddr((addr+1)&0xff)<<8));
+        return (this.readAddr(addr)|((this.readAddr(addr+1)<<8)))&0xffff;
     }
 
     writeAddr(addr,value)
@@ -286,9 +302,14 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            //alert("writeAddr::Bad address ["+addr+"]");
+            alert("writeAddr::Bad address ["+addr+"]");
         }
         addr&=0xffff;
+
+        if (addr==0xd001)
+        {
+            console.log("Wrote ["+value.toString(16)+"] to 0xd001");
+        }
 
         if (addr==0x0000)
         {

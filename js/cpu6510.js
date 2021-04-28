@@ -306,6 +306,7 @@ class cpu6510
         ctx.fillText("NVxBDIZC", px+540, initialpy+fontSpace*3);
         ctx.fillText(this.getFlagsString(), px+540, initialpy+fontSpace*4);
         ctx.fillText("Total CPU cycles:"+this.totCycles.toString(16), px+540, initialpy+fontSpace*5);
+        ctx.fillText("Port config:"+this.mmu.processorPortReg.toString(16), px+540, initialpy+fontSpace*6);
 
         // moused line
         if ((this.mousePosy>=initialpy)&&(this.mousePosx<512)&&(this.mousePosy<(25*fontSpace)))
@@ -2831,7 +2832,7 @@ class cpu6510
         if ((this.sp>0xff)||(this.sp<0)) alert("Warning: sp out of bounds at "+this.pc.toString(16));
         if ((this.pc>0xffff)||(this.pc<0)) alert("Warning: pc out of bounds at "+this.pc.toString(16));
 
-        this.traceLog();
+        //this.traceLog();
 
         return elapsedCycles;
     }
