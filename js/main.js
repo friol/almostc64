@@ -168,6 +168,7 @@ function startupFunction()
 	ciaChip1.linkCpu(cpu);
 	ciaChip2.linkCpu(cpu);
 	vicChip.setCPU(cpu);
+	vicChip.setMMU(glbMMU);
 
 	var rad = document.joyform.joySelection;
 	var prev = null;
@@ -228,7 +229,7 @@ function startupFunction()
 		else if (e.key=="PageUp")
 		{
 			// step n debugger steps
-			while (cpu.pc!=0x8af)
+			while (cpu.pc!=0x8e2)
 			{
 				var elcyc=cpu.executeOneOpcode();			
 				ciaChip1.update(elcyc,cpu);
@@ -411,13 +412,13 @@ function startupFunction()
 						}
 					}
 
-					if ((cpu.startLogging==false)&&(cpu.pc==0x80d))
+					/*if ((cpu.startLogging==false)&&(cpu.pc==0x8e2))
 					{
-						cpu.startLogging=true;
+						//cpu.startLogging=true;
 						//cpu.traceLog();
 						globalEmuStatus=0;
 						break;
-					}
+					}*/
 				}	
 
 				globalOldCyc=cpu.totCycles;

@@ -641,7 +641,7 @@ class cpu6510
             {
                 // ORA (Indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi = this.mmu.readAddr16bit((operand + this.x) & 0xff);
+                var indi = this.mmu.getWrappedAddr((operand + this.x) & 0xff);
                 var iop = this.mmu.readAddr(indi);
                 this.a |= iop;
                 this.doFlagsNZ(this.a);            
@@ -1073,7 +1073,7 @@ class cpu6510
             {
                 // AND (indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi=this.mmu.readAddr16bit((operand+this.x)&0xff);
+                var indi=this.mmu.getWrappedAddr((operand+this.x)&0xff);
                 var iop=this.mmu.readAddr(indi);
                 this.a&=iop;
                 this.doFlagsNZ(this.a);            
@@ -1410,7 +1410,7 @@ class cpu6510
             {
                 // EOR (indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi=this.mmu.readAddr16bit((operand+this.x)&0xff);
+                var indi=this.mmu.getWrappedAddr((operand+this.x)&0xff);
                 var opz = this.mmu.readAddr(indi);
                 this.a^=opz;
                 this.doFlagsNZ(this.a);
@@ -1679,7 +1679,7 @@ class cpu6510
             {
                 // ADC (indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi=this.mmu.readAddr16bit((operand+this.x)&0xff);
+                var indi=this.mmu.getWrappedAddr((operand+this.x)&0xff);
                 var zpval=this.mmu.readAddr(indi);
                 this.doAdc(zpval);
                 break;
@@ -1954,7 +1954,7 @@ class cpu6510
             {
                 // STA (indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi=this.mmu.readAddr16bit((operand+this.x)&0xff);
+                var indi=this.mmu.getWrappedAddr((operand+this.x)&0xff);
                 this.mmu.writeAddr(indi,this.a);
                 break;
             }
@@ -2111,7 +2111,7 @@ class cpu6510
             {
                 // LDA (indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi=this.mmu.readAddr16bit((operand+this.x)&0xff);
+                var indi=this.mmu.getWrappedAddr((operand+this.x)&0xff);
                 this.a=this.mmu.readAddr(indi);
                 this.doFlagsNZ(this.a);
                 break;
@@ -2357,7 +2357,7 @@ class cpu6510
             {
                 // CMP (Indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi = this.mmu.readAddr16bit((operand + this.x) & 0xff);
+                var indi = this.mmu.getWrappedAddr((operand + this.x) & 0xff);
                 var iop = this.mmu.readAddr(indi);
 
                 if (this.a>=iop) this.flagsC=1;
@@ -2612,7 +2612,7 @@ class cpu6510
             {
                 // SBC (indirect,X)
                 var operand=this.mmu.readAddr(this.pc+1);
-                var indi = this.mmu.readAddr16bit((operand + this.x) & 0xff);
+                var indi = this.mmu.getWrappedAddr((operand + this.x) & 0xff);
                 var iop = this.mmu.readAddr(indi);
                 this.doSbc(iop);
                 break;

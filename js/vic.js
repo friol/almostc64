@@ -105,6 +105,11 @@ class vic
         this.theCpu=theCpu;
     }
 
+    setMMU(theMMU)
+    {
+        this.theMmu=theMMU;
+    }
+
     updateVic(clocksElapsed,theCpu)
     {
         this.rasterTicker += clocksElapsed;
@@ -490,7 +495,8 @@ class vic
             var currentChar = mmu.readAddr((row * 40) + xpos + vicbase,true);
     
             var colorRamAddr=0xd800;
-            var currentCharCol=mmu.readAddr(colorRamAddr+(row*this.charmodeNumxchars)+xpos,true)&0x0f;
+            //var currentCharCol=mmu.readAddr(colorRamAddr+(row*this.charmodeNumxchars)+xpos,true)&0x0f;
+            var currentCharCol=mmu.colorram[(row*this.charmodeNumxchars)+xpos]&0x0f;
 
             var bgColorNumber=0;
             if (extendedColorTextMode) 
@@ -621,7 +627,8 @@ class vic
                 colorArray[2]=(bytecol&0x0f);
 
                 const colorRamAddr=0xd800;
-                var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos,true)&0x0f;
+                //var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos,true)&0x0f;
+                var colRamVal=mmu.colorram[colorRamPos]&0x0f;
                 colorArray[3]= colRamVal;
 
                 var bytepix=mmu.readAddr(baseaddr,true);

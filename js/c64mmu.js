@@ -15,6 +15,9 @@ class c64mmu
 
         this.ram64k=new Array(65536);
         this.cpustack=new Array(0x100);
+        this.colorram=new Array(0x800);
+
+        for (var i=0;i<0x800;i++) this.colorram[i]=0;
 
         var ramPos=0;
         for (var i = 0; i < 512; i++)
@@ -243,8 +246,7 @@ class c64mmu
                 else if ((addr>=0xd800)&&(addr<=0xdbff))
                 {
                     // color RAM
-                    //(color_ram[adr & 0x03ff] & 0x0f | TheVIC.LastVICByte & 0xf0)
-                    return ((this.ram64k[addr]&0x0f)|(this.lastVICbyte&0xf0));
+                    return ((this.colorram[addr-0xd800]&0x0f)|(this.lastVICbyte&0xf0));
                 }                
                 else if ((addr>=0xd000)&&(addr<=0xd3ff))
                 {
@@ -291,6 +293,18 @@ class c64mmu
         //if (addr<=0xff) return (this.readAddr(addr)+(this.readAddr((addr+1)&0xff)<<8));
         return (this.readAddr(addr)|((this.readAddr(addr+1)<<8)))&0xffff;
     }
+
+    getWrappedAddr(addr)
+    {
+        if ((addr & 0xff) == 0xff)
+        {
+            return ((this.readAddr(addr&0xff00)) << 8) | (this.readAddr(addr));
+        }
+        else
+        {
+            return ((this.readAddr(addr + 1)) << 8) | (this.readAddr(addr));
+        }
+    }    
 
     writeAddr(addr,value)
     {
@@ -360,7 +374,8 @@ class c64mmu
                 if ((addr>=0xd800)&&(addr<=0xdbff))
                 {
                     // color RAM
-                    this.ram64k[addr]=value;
+                    //this.ram64k[addr]=value;
+                    this.colorram[addr-0xd800]=value&0x0f;
                 }
                 else if ((addr >= 0xdc00) && (addr <= 0xdcff))
                 {
