@@ -78,7 +78,7 @@ class sid
         return (Math.floor(Math.random()*255.0))&0xff;
     }
 
-    startMix()
+    startMix(thecpu)
     {
         try 
         {
@@ -107,7 +107,7 @@ class sid
     
             this.gainNode.connect(this.context.destination);
 
-            this.multiplier=Math.floor(1022727/this.jsNode.context.sampleRate);
+            this.multiplier=Math.floor(thecpu.frequency/this.jsNode.context.sampleRate);
             this.sampleArray=new Array(this.multiplier);
             for (var i=0;i<this.multiplier;i++)
             {

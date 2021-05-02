@@ -4,7 +4,6 @@ class vic
 {
     constructor()
     {
-        //this.debugShifter=0;
         this.imgData=undefined;
         this.canvasRenderer=undefined;
 
@@ -113,10 +112,6 @@ class vic
     updateVic(clocksElapsed,theCpu)
     {
         this.rasterTicker += clocksElapsed;
-
-        //const framesPerSecond = 60;
-        //const c64freq = 1022727; // NTSC
-        //const c64freq = 985248 ; // PAL
 
         var changedRasterline=false;
 
@@ -473,6 +468,8 @@ class vic
             multicolorMode=true;
         }
 
+        //
+
         var vicbank = cia2.cia2getVICbank();
         var realvicbank = (3 - vicbank) * 0x4000;
 
@@ -481,21 +478,21 @@ class vic
 
         var mempos = (((this.memoryControlReg_d018 >> 1) & 0x07) * 0x800) | realvicbank;
 
-        //var row=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2))/8);
-        var row=Math.floor((curScanline-this.yUpperBorderWidth)/8);
+        //
+
+        var yscroll=this.screencontrol1_d011&0x07;
+        var yscrollamt=yscroll-3;
+
+        var row=Math.floor((curScanline-yscrollamt-this.yUpperBorderWidth)/8);
         if (row<0) return;
+
         var chpx=this.xLeftBorderWidth;
-        var chpy=curScanline;
-        //var y=Math.floor((curScanline-Math.floor((this.rasterLines-200)/2)))%8;
-        var y=Math.floor(curScanline-this.yUpperBorderWidth)%8;
+        var y=(curScanline-yscrollamt-this.yUpperBorderWidth)&0x07;
 
         // inner area
         for (var xpos=0;xpos<(this.charmodeNumxchars);xpos++)
         {
             var currentChar = mmu.readAddr((row * 40) + xpos + vicbase,true);
-    
-            var colorRamAddr=0xd800;
-            //var currentCharCol=mmu.readAddr(colorRamAddr+(row*this.charmodeNumxchars)+xpos,true)&0x0f;
             var currentCharCol=mmu.colorram[(row*this.charmodeNumxchars)+xpos]&0x0f;
 
             var bgColorNumber=0;
@@ -874,8 +871,11 @@ class vic
         {
             if ((this.screencontrol1_d011&0x20)==0)
             {
+                var upperBorderAdder=0;
+                if ((this.screencontrol1_d011&0x08)==0) upperBorderAdder=4;
+
                 // are we in a border scanline?
-                if ( (curScanline<(this.yUpperBorderWidth+this.vblankWidth)) || (curScanline>=(this.yUpperBorderWidth+this.vblankWidth+200)) )
+                if ( (curScanline<(this.yUpperBorderWidth+this.vblankWidth+upperBorderAdder)) || (curScanline>=(this.yUpperBorderWidth+this.vblankWidth+200-upperBorderAdder)) )
                 {
                     for (var p=(this.xResolutionTotal*(curScanline-this.vblankWidth));p<(this.xResolutionTotal*(curScanline-this.vblankWidth+1));p++)            
                     {
@@ -886,7 +886,7 @@ class vic
                 {
                     this.drawCharRasterline(cia2,mmu,curScanline-this.vblankWidth,true);
                     // background sprites
-                    this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline-this.vblankWidth,1);
+                    if (curScanline>=50) this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline-this.vblankWidth,1);
                     this.drawCharRasterline(cia2,mmu,curScanline-this.vblankWidth,false);
                 }
             }
@@ -900,7 +900,7 @@ class vic
             }
 
             // foreground sprites
-            this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline-this.vblankWidth,0);
+            if (curScanline>=50) this.drawSprites(px+this.xLeftBorderWidth,py+this.yUpperBorderWidth,mmu,cia2,curScanline-this.vblankWidth,0);
         }
         else
         {

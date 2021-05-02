@@ -7,7 +7,7 @@ TODO:
 - spr/background collision
 - undocumented opcodes
 - ADSR envelopes
-- y scrolling, 24 rows
+- sid filters
 
 DONE:
 - all documented opcodes tested against Lorenz test suite
@@ -15,6 +15,7 @@ DONE:
 - sprite priority d01b
 - performance: screen buffer as an array of bytes, then blit to RGBA
 - x scrolling, 38/40 cols
+- y scrolling, 24 rows (some games like boulder dash and up'n'down don't scroll properly)
 - spr/spr collisions
 - SID digis
 
@@ -185,7 +186,7 @@ function startupFunction()
 		if (globalEmuStatus!=2) return;
 		if (glbPlayColor=="black") return;
 
-		if (!sidChip.audioInitialized) sidChip.startMix();
+		if (!sidChip.audioInitialized) sidChip.startMix(cpu);
 		globalEmuStatus=1;
 
 		document.getElementById("prgSelector").disabled=false;
@@ -439,7 +440,7 @@ function startupFunction()
 		var fpeez=(1000/frameTime).toFixed(1);
 		fpsOut.innerHTML = fpeez + " fps";
 
-		window.setTimeout(updateScreen,13);
+		window.setTimeout(updateScreen,16);
 	}
 
 	updateScreen();
@@ -484,7 +485,7 @@ function handleFileUpload(fls)
 		}		
 		else
 		{
-			alert("Doesn't seem to be a BASIC program");
+			//alert("Doesn't seem to be a BASIC program");
 		}
 
 		// run program
@@ -541,7 +542,7 @@ function loadCracktro(th)
 				}		
 				else
 				{
-					alert("Doesn't seem to be a BASIC program");
+					//alert("Doesn't seem to be a BASIC program");
 				}
 		
 				// run program
@@ -604,7 +605,7 @@ function loadNextProggie()
 				}		
 				else
 				{
-					alert("Doesn't seem to be a BASIC program");
+					//alert("Doesn't seem to be a BASIC program");
 				}
 		
 				// run program

@@ -4,6 +4,8 @@ class cpu6510
 {
     constructor(theMmu)
     {
+        this.frequency=985248;
+
         this.startLogging=false;
         this.loggingCount=0;
 
@@ -103,6 +105,7 @@ class cpu6510
         this.instructionTable[0x5A]=[1,2,`NOP`]; // undocumented
         this.instructionTable[0x5D]=[3,4,`EOR %d,X`];//*
         this.instructionTable[0x5E]=[3,7,`LSR %d,X`];//*
+        this.instructionTable[0x5F]=[3,7,`SRE %d,X`];//*
 
         this.instructionTable[0x60]=[1,6,`RTS`];
         this.instructionTable[0x61]=[2,6,`ADC (%d,X)`];
@@ -1657,7 +1660,32 @@ class cpu6510
 
                 this.mmu.writeAddr(operand+this.x,theb);
 
-                this.doFlagsNZ(theb); // TODO ricontrollare perché in c64u non facevamo doflagsnz
+                this.doFlagsNZ(theb);
+                break;
+            }
+            case 0x5F:
+            {
+                // SRE absolute,X undocumented FIXXX
+                var operand=this.mmu.readAddr16bit(this.pc+1);
+                var origByte = this.mmu.readAddr(operand+this.x);
+                var theb=origByte;
+                if ((theb & 0x01)!=0)
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                theb >>= 1;
+                theb &= 0x7f;
+
+                this.mmu.writeAddr(operand+this.x,theb);
+
+                this.a^=origByte;
+
+                this.doFlagsNZ(this.a);
                 break;
             }
             case 0x60:
