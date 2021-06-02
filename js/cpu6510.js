@@ -612,7 +612,6 @@ class cpu6510
             case 0x00:
             {
                 // BRK
-                //alert("brk");
 
                 this.mmu.writeAddr(0x100 | this.sp,(((this.pc+2) >> 8) & 0xff));
                 this.sp--;
@@ -2845,7 +2844,7 @@ class cpu6510
 
         if ((this.x==undefined)||(this.y==undefined)||(this.a==undefined)||(this.pc==undefined)||(this.sp==undefined))
         {
-            alert("undeffff!");
+            alert("x,y,a,pc or sp undefined");
         }
 
         if (!jumped) this.pc+=this.instructionTable[nextOpcode][0];

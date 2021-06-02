@@ -159,7 +159,7 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            alert("readAddr::Bad address ["+addr+"]");
+            //alert("readAddr::Bad address ["+addr+"]");
         }
 
         addr&=0xffff;
@@ -316,14 +316,9 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            alert("writeAddr::Bad address ["+addr+"]");
+            //alert("writeAddr::Bad address ["+addr+"]");
         }
         addr&=0xffff;
-
-        if (addr==0xd001)
-        {
-            console.log("Wrote ["+value.toString(16)+"] to 0xd001");
-        }
 
         if (addr==0x0000)
         {

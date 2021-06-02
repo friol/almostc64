@@ -560,6 +560,7 @@ class vic
             this.byteFrameBuffer[xlb+(curScanline*this.xResolutionTotal)]=this.foregroundColor;
         }
 
+        //this.byteFrameBuffer[10+(curScanline*this.xResolutionTotal)]=2;        
     }
 
     //
@@ -623,8 +624,6 @@ class vic
                 colorArray[1]=(bytecol>>4)&0x0f;
                 colorArray[2]=(bytecol&0x0f);
 
-                const colorRamAddr=0xd800;
-                //var colRamVal=mmu.readAddr(colorRamAddr+colorRamPos,true)&0x0f;
                 var colRamVal=mmu.colorram[colorRamPos]&0x0f;
                 colorArray[3]= colRamVal;
 
@@ -867,11 +866,11 @@ class vic
             curScanline=slOverride;
         }
 
+        var upperBorderAdder=0;
         if ((this.screencontrol1_d011 & 0x10)!=0) // screen not blanked
         {
-            if ((this.screencontrol1_d011&0x20)==0)
+            if ((this.screencontrol1_d011&0x20)==0) // bitmap mode?
             {
-                var upperBorderAdder=0;
                 if ((this.screencontrol1_d011&0x08)==0) upperBorderAdder=4;
 
                 // are we in a border scanline?
@@ -893,7 +892,7 @@ class vic
             else
             {
                 // bitmap mood
-                if ( (curScanline>=(this.yUpperBorderWidth+this.vblankWidth)) && (curScanline<(this.yUpperBorderWidth+this.vblankWidth+200)) )
+                if ( (curScanline>=(this.yUpperBorderWidth+this.vblankWidth+upperBorderAdder)) && (curScanline<(this.yUpperBorderWidth+this.vblankWidth+200-upperBorderAdder)) )
                 {
                     this.drawBitmapScreenRasterline(mmu,cia2,curScanline-this.vblankWidth);
                 }
