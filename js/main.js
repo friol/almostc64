@@ -24,7 +24,10 @@ DONE:
 var globalListOfOpcodes;
 var globalEmuStatus=0; // 0 debugging single step, 1 running
 var globalOldCyc=0;
+var glbTargetTimeout=10;
+var glbAdjustFpsCounter=0;
 
+var glbCPU;
 var glbMMU;
 
 var filterStrength = 20;
@@ -156,6 +159,22 @@ var glbProgNum=0;
 //
 //
 
+function waitForLoad()
+{
+	if (glbMMU.romsLoaded)
+	{
+		glbCPU.powerUp();
+	}
+	else
+	{
+		window.setTimeout(function() 
+		{
+			waitForLoad();
+		},
+		200);
+	}
+}
+
 function startupFunction()
 {
 	globalEmuStatus=2;
@@ -165,10 +184,10 @@ function startupFunction()
 	var vicChip=new vic();
 	var sidChip=new sid();
 	glbMMU=new c64mmu(vicChip,ciaChip1,ciaChip2,sidChip);
-	var cpu=new cpu6510(glbMMU);
-	ciaChip1.linkCpu(cpu);
-	ciaChip2.linkCpu(cpu);
-	vicChip.setCPU(cpu);
+	glbCPU=new cpu6510(glbMMU);
+	ciaChip1.linkCpu(glbCPU);
+	ciaChip2.linkCpu(glbCPU);
+	vicChip.setCPU(glbCPU);
 	vicChip.setMMU(glbMMU);
 
 	var rad = document.joyform.joySelection;
@@ -186,7 +205,7 @@ function startupFunction()
 		if (globalEmuStatus!=2) return;
 		if (glbPlayColor=="black") return;
 
-		if (!sidChip.audioInitialized) sidChip.startMix(cpu);
+		if (!sidChip.audioInitialized) sidChip.startMix(glbCPU);
 		globalEmuStatus=1;
 
 		document.getElementById("prgSelector").disabled=false;
@@ -212,7 +231,7 @@ function startupFunction()
 		if (dist<60.0) glbPlayColor="#2020e0";
 		else glbPlayColor="black";
 
-		cpu.setMousePos(relativeX,relativeY);
+		glbCPU.setMousePos(relativeX,relativeY);
 	}, 
 	false);
 
@@ -221,39 +240,39 @@ function startupFunction()
 		if (e.key=="F10")
 		{
 			// single debugger step
-			var elcyc=cpu.executeOneOpcode();			
-			ciaChip1.update(elcyc,cpu);
-			ciaChip2.update(elcyc,cpu);
-			vicChip.updateVic(elcyc,cpu);
-			sidChip.step(cpu.totCycles);
+			var elcyc=glbCPU.executeOneOpcode();			
+			ciaChip1.update(elcyc,glbCPU);
+			ciaChip2.update(elcyc,glbCPU);
+			vicChip.updateVic(elcyc,glbCPU);
+			sidChip.step(glbCPU.totCycles);
 		}
 		else if (e.key=="PageUp")
 		{
 			// step n debugger steps
-			while (cpu.pc!=0x8e2)
+			while (glbCPU.pc!=0x8e2)
 			{
-				var elcyc=cpu.executeOneOpcode();			
-				ciaChip1.update(elcyc,cpu);
-				ciaChip2.update(elcyc,cpu);
-				vicChip.updateVic(elcyc,cpu);
-				sidChip.step(cpu.totCycles);
+				var elcyc=glbCPU.executeOneOpcode();			
+				ciaChip1.update(elcyc,glbCPU);
+				ciaChip2.update(elcyc,glbCPU);
+				vicChip.updateVic(elcyc,glbCPU);
+				sidChip.step(glbCPU.totCycles);
 			}
 		}
 		else if (e.key=="PageDown")
 		{
 			// run to cursor
-			var targetPC=cpu.runToCursor(30,globalListOfOpcodes);
+			var targetPC=glbCPU.runToCursor(30,globalListOfOpcodes);
 			if (targetPC!=-1)
 			{
 				var times=0;
 				var updateTimer=0;
-				while ((cpu.pc!=targetPC))
+				while ((glbCPU.pc!=targetPC))
 				{
-					var elcyc=cpu.executeOneOpcode();			
-					ciaChip1.update(elcyc,cpu);
-					ciaChip2.update(elcyc,cpu);
-					vicChip.updateVic(elcyc,cpu);
-					sidChip.step(cpu.totCycles);
+					var elcyc=glbCPU.executeOneOpcode();			
+					ciaChip1.update(elcyc,glbCPU);
+					ciaChip2.update(elcyc,glbCPU);
+					vicChip.updateVic(elcyc,glbCPU);
+					sidChip.step(glbCPU.totCycles);
 							
 					times+=1;
 					updateTimer+=1;
@@ -344,7 +363,11 @@ function startupFunction()
 		else ciaChip1.keyUp(e.key);
 	}
 	
-	window.setTimeout(function() {cpu.powerUp();},200);
+	window.setTimeout(function() 
+	{
+		waitForLoad();
+	},
+	200);
 
 	function showStartupScreen(cnvs)
 	{
@@ -378,14 +401,14 @@ function startupFunction()
 
 	function updateScreen()
 	{
-		if (glbMMU.romsLoaded && cpu.CPUstarted)
+		if (glbMMU.romsLoaded && glbCPU.CPUstarted)
 		{
 			if (globalEmuStatus==0)
 			{
 				globalListOfOpcodes=new Array();
-				cpu.debugOpcodes(24,globalListOfOpcodes);
+				glbCPU.debugOpcodes(24,globalListOfOpcodes);
 				
-				cpu.drawDebugInfo(globalListOfOpcodes,10,30,0);
+				glbCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
 				//vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2);
 
 				for (var i=0;i<=294;i++)
@@ -396,13 +419,13 @@ function startupFunction()
 			}
 			else if (globalEmuStatus==1)
 			{
-				while ((cpu.totCycles-globalOldCyc)<(19656))
+				while ((glbCPU.totCycles-globalOldCyc)<(19656))
 				{
-					var elcyc=cpu.executeOneOpcode();			
-					ciaChip1.update(elcyc,cpu);
-					ciaChip2.update(elcyc,cpu);
-					sidChip.step(cpu.totCycles);
-					var chRasterLine=vicChip.updateVic(elcyc,cpu);
+					var elcyc=glbCPU.executeOneOpcode();			
+					ciaChip1.update(elcyc,glbCPU);
+					ciaChip2.update(elcyc,glbCPU);
+					sidChip.step(glbCPU.totCycles);
+					var chRasterLine=vicChip.updateVic(elcyc,glbCPU);
 					if (chRasterLine)
 					{
 						// draw previous line
@@ -422,7 +445,7 @@ function startupFunction()
 					}*/
 				}	
 
-				globalOldCyc=cpu.totCycles;
+				globalOldCyc=glbCPU.totCycles;
 			}
 			else if (globalEmuStatus==2)
 			{
@@ -440,7 +463,24 @@ function startupFunction()
 		var fpeez=(1000/frameTime).toFixed(1);
 		fpsOut.innerHTML = fpeez + " fps";
 
-		window.setTimeout(updateScreen,16);
+		if (glbAdjustFpsCounter==10)
+		{
+			glbAdjustFpsCounter=0;
+			if (fpeez<60)
+			{
+				if (glbTargetTimeout>0) glbTargetTimeout--;
+			}
+			else if (fpeez>60)
+			{
+				glbTargetTimeout++;
+			}
+		}
+		else
+		{
+			glbAdjustFpsCounter++;
+		}
+
+		window.setTimeout(updateScreen,10);
 	}
 
 	updateScreen();
