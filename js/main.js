@@ -460,17 +460,17 @@ function startupFunction()
 		lastLoop = thisLoop;
 
 		var fpsOut = document.getElementById('fpsSpan');
-		var fpeez=(1000/frameTime).toFixed(1);
+		var fpeez=parseInt((1000/frameTime).toFixed(1));
 		fpsOut.innerHTML = fpeez + " fps";
 
-		if (glbAdjustFpsCounter==10)
+		/*if (glbAdjustFpsCounter==100)
 		{
 			glbAdjustFpsCounter=0;
-			if (fpeez<60)
+			if (fpeez<55)
 			{
 				if (glbTargetTimeout>0) glbTargetTimeout--;
 			}
-			else if (fpeez>60)
+			else if (fpeez>55)
 			{
 				glbTargetTimeout++;
 			}
@@ -478,9 +478,9 @@ function startupFunction()
 		else
 		{
 			glbAdjustFpsCounter++;
-		}
+		}*/
 
-		window.setTimeout(updateScreen,10);
+		window.setTimeout(updateScreen,12);
 	}
 
 	updateScreen();
