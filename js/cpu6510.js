@@ -1389,15 +1389,14 @@ class cpu6510
             case 0x40:
             {
                 // RTI
-                //var operand=this.mmu.readAddr(this.pc+1);
-                //this.doFlagsNZ(this.a);
+                console.log("CPU::Warning: RTI");
                 
                 this.sp++;
                 if (this.sp>0xff) this.sp=0;
                 var preg = this.mmu.readAddr(0x100|this.sp);
                 this.flagsN=(preg&0x80)?1:0;
                 this.flagsV=(preg&0x40)?1:0;
-                this.flagsB=(preg&0x10)?1:0;
+                //this.flagsB=(preg&0x10)?1:0;
                 this.flagsD=(preg&0x08)?1:0;
                 this.flagsI=(preg&0x04)?1:0;
                 this.flagsZ=(preg&0x02)?1:0;
