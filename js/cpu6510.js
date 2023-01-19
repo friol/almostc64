@@ -652,7 +652,7 @@ class cpu6510
             case 0x03:
             {
                 // SLO (zp,X) undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var iop = this.mmu.readAddr((operand+this.x)&0xff);
 
@@ -708,7 +708,7 @@ class cpu6510
             case 0x07:
             {
                 // SLO zeropage undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var zpval=this.mmu.readAddr(operand);
 
@@ -775,7 +775,7 @@ class cpu6510
             case 0x0B:
             {
                 // ANC immediate undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 this.a&=operand;
 
@@ -794,7 +794,7 @@ class cpu6510
             case 0x0C:
             {
                 // NOP absolute undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr16bit(this.pc+1);
                 break;
             }
@@ -831,7 +831,7 @@ class cpu6510
             case 0x0F:
             {
                 // SLO absolute undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var iop = this.mmu.readAddr(operand&0xff);
 
@@ -886,7 +886,7 @@ class cpu6510
             case 0x13:
             {
                 // SLO (operand),Y undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var address=this.mmu.readAddr16bit(operand);
                 var finalAddress=(address+this.y)&0xffff;
@@ -911,7 +911,7 @@ class cpu6510
             case 0x14:
             {
                 // NOP zeropage,X undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 break;
             }
             case 0x15:
@@ -945,7 +945,7 @@ class cpu6510
             case 0x17:
             {
                 // SLO zeropage,X undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var iop = this.mmu.readAddr((operand+this.x)&0xff);
 
@@ -984,13 +984,13 @@ class cpu6510
             case 0x1A:
             {
                 // NOP undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 break;
             }
             case 0x1B:
             {
                 // SLO abs,Y undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr16bit(this.pc+1);
                 var iop = this.mmu.readAddr((operand+this.y)&0xffff);
 
@@ -1052,7 +1052,7 @@ class cpu6510
             case 0x1F:
             {
                 // SLO abs,X undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
                 var iop = this.mmu.readAddr((operand+this.x)&0xffff);
@@ -1349,7 +1349,7 @@ class cpu6510
             case 0x3c:
             {
                 // NOP undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 break;
             }
             case 0x3d:
@@ -1389,7 +1389,7 @@ class cpu6510
             case 0x40:
             {
                 // RTI
-                console.log("CPU::Warning: RTI");
+                //console.log("CPU::Warning: RTI");
                 
                 this.sp++;
                 if (this.sp>0xff) this.sp=0;
@@ -1431,7 +1431,7 @@ class cpu6510
             case 0x44:
             {
                 // NOP undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 break;
             }
             case 0x45:
@@ -1505,7 +1505,7 @@ class cpu6510
             case 0x4B:
             {
                 // ALR immediate undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 this.a&=operand;
 
@@ -1645,7 +1645,7 @@ class cpu6510
             case 0x5A:
             {
                 // NOP undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 break;
             }
             case 0x5D:
@@ -1684,7 +1684,7 @@ class cpu6510
             case 0x5F:
             {
                 // SRE absolute,X undocumented FIXXX
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
                 var origByte = this.mmu.readAddr(operand+this.x);
@@ -2001,7 +2001,7 @@ class cpu6510
             case 0x80:
             {
                 // SKB undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 this.pc+=1;
                 break;
             }
@@ -2016,7 +2016,7 @@ class cpu6510
             case 0x82:
             {
                 // NOP undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 break;
             }
             case 0x84:
@@ -2043,7 +2043,7 @@ class cpu6510
             case 0x87:
             {
                 // SAX zeropage undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 this.mmu.writeAddr(operand,this.a&this.x);
                 break;
@@ -2222,7 +2222,7 @@ class cpu6510
             case 0xA7:
             {
                 // LAX zeropage undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var zpval=this.mmu.readAddr(operand);
                 this.a=zpval;
@@ -2274,7 +2274,7 @@ class cpu6510
             case 0xAF:
             {
                 // LAX absolute undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
                 var laxval=this.mmu.readAddr(operand);
@@ -2315,7 +2315,7 @@ class cpu6510
             case 0xb3:
             {
                 // LAX (ZeroPage),Y undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var indi = this.mmu.readAddr16bit(operand);
                 var finval=this.mmu.readAddr((indi+this.y)&0xffff);
@@ -2352,7 +2352,7 @@ class cpu6510
             case 0xB7:
             {
                 // LAX zeropage,y undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var zpval=this.mmu.readAddr((operand + this.y)&0xff);
                 
@@ -2444,7 +2444,7 @@ class cpu6510
             case 0xC3:
             {
                 // DCP zeropage,x undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var indi = this.mmu.readAddr16bit((operand + this.x) & 0xff);
                 var mval=this.mmu.readAddr(indi);
@@ -2506,7 +2506,7 @@ class cpu6510
             case 0xC7:
             {
                 // DCP zeropage undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var mval=this.mmu.readAddr(operand);
                 mval-=1;
@@ -2547,7 +2547,7 @@ class cpu6510
             case 0xCB:
             {
                 // ASX or SBX, undocumented, X = A & X - #{imm}
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 
                 const tmp = (this.a & this.x) - operand;
@@ -2617,7 +2617,7 @@ class cpu6510
             case 0xD4:
             {
                 // NOP zeropage,X undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var opz=this.mmu.readAddr((operand+this.x)&0xff);
                 break;
@@ -2756,7 +2756,7 @@ class cpu6510
             case 0xeb:
             {
                 // SBC immediate undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 this.doSbc(operand);
                 break;
@@ -2860,13 +2860,13 @@ class cpu6510
             case 0xFA:
             {
                 // NOP undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 break;
             }
             case 0xFC:
             {
                 // NOP abs, x undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr16bit(this.pc+1);
                 break;
             }
@@ -2895,7 +2895,7 @@ class cpu6510
             case 0xFF:
             {
                 // ISC absolute,X undocumented
-                console.log("Undoc opcode");
+                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
                 var curval=this.mmu.readAddr(operand+this.x);
