@@ -29,6 +29,8 @@ var glbAdjustFpsCounter=0;
 
 var glbCPU;
 var glbMMU;
+var glbDiskCPU;
+var glbDiskMMU;
 
 var filterStrength = 20;
 var frameTime = 0, lastLoop = new Date, thisLoop;
@@ -161,9 +163,10 @@ var glbProgNum=0;
 
 function waitForLoad()
 {
-	if (glbMMU.romsLoaded)
+	if (glbMMU.romsLoaded&&glbDiskMMU.romsLoaded)
 	{
 		glbCPU.powerUp();
+		glbDiskCPU.powerUp();
 	}
 	else
 	{
@@ -189,6 +192,11 @@ function startupFunction()
 	ciaChip2.linkCpu(glbCPU);
 	vicChip.setCPU(glbCPU);
 	vicChip.setMMU(glbMMU);
+
+	var viaChip1=new via(1);
+	var viaChip2=new via(2);
+	glbDiskMMU=new disk1541mmu(viaChip1,viaChip2);
+	glbDiskCPU=new cpu6510(glbDiskMMU);
 
 	var rad = document.joyform.joySelection;
 	var prev = null;
@@ -425,6 +433,7 @@ function startupFunction()
 					ciaChip1.update(elcyc,glbCPU);
 					ciaChip2.update(elcyc,glbCPU);
 					sidChip.step(glbCPU.totCycles);
+					glbDiskCPU.executeOneOpcode();
 					var chRasterLine=vicChip.updateVic(elcyc,glbCPU);
 					if (chRasterLine)
 					{
