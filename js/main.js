@@ -3,6 +3,9 @@
 
 Almost C64 emulator - main.js 
 
+IN PROGRESS:
+- 1541 emulation
+
 TODO:
 - spr/background collision
 - undocumented opcodes
@@ -193,10 +196,13 @@ function startupFunction()
 	vicChip.setCPU(glbCPU);
 	vicChip.setMMU(glbMMU);
 
-	var viaChip1=new via(1);
-	var viaChip2=new via(2);
+	var fdcController=new fdc1541();
+	var viaChip1=new via(1,fdcController);
+	var viaChip2=new via(2,fdcController);
 	glbDiskMMU=new disk1541mmu(viaChip1,viaChip2);
 	glbDiskCPU=new cpu6510(glbDiskMMU);
+
+	ciaChip2.linkVia(viaChip1);
 
 	var rad = document.joyform.joySelection;
 	var prev = null;

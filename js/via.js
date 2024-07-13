@@ -2,7 +2,7 @@
 
 class via
 {
-    constructor(id)
+    constructor(id,fdcCtrl)
     {
         this.viaId=id;
 
@@ -11,7 +11,7 @@ class via
         this.ddrA=0;
         this.ddrB=0;
 
-
+        this.fdc=fdcCtrl;
     }
 
     readVIARegister(addr)

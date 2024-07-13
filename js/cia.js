@@ -9,6 +9,8 @@ class cia
         this.icr1=0;
         this.sdr=0;
 
+        this.viaptr=undefined;
+
         this.ciatod=new tod();
         
         this.irqControlReg_dc0d=0;
@@ -64,6 +66,11 @@ class cia
     linkCpu(c)
     {
         this.cCpu=c;
+    }
+
+    linkVia(v)
+    {
+        this.viaptr=v;
     }
 
     keyPress(kv)
@@ -418,7 +425,25 @@ class cia
         if (this.ciaId==1) addr = (addr%0x10) | 0xdc00;
         if (this.ciaId==2) addr = (addr%0x10) | 0xdd00;
 
-        if ((addr==0xdc00)||(addr==0xdd00))
+        if (addr==0xdd00)
+        {
+            this.dataPortA=value;
+            if ((this.ciaId==2)&&(addr==0xdd00))
+            {
+                // dd00 is the serial bus with the disk drive
+                /*
+                Bit #3: Serial bus ATN OUT; 0 = High; 1 = Low.
+                Bit #4: Serial bus CLOCK OUT; 0 = High; 1 = Low.
+                Bit #5: Serial bus DATA OUT; 0 = High; 1 = Low.
+
+                Bit #6: Serial bus CLOCK IN; 0 = Low; 1 = High.
+                Bit #7: Serial bus DATA IN; 0 = Low; 1 = High.                
+                */
+
+
+            }
+        }
+        else if (addr==0xdc00)
         {
             this.dataPortA=value;
             //if ((this.ciaId==2)&&(addr==0xdd00)) console.log("CIA2 set dataportA DD00 "+value.toString(16));
