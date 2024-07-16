@@ -203,6 +203,7 @@ function startupFunction()
 	glbDiskCPU=new cpu6510(glbDiskMMU);
 
 	ciaChip2.linkVia(viaChip1);
+	viaChip1.linkCia(ciaChip2);
 
 	var rad = document.joyform.joySelection;
 	var prev = null;

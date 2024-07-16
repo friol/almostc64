@@ -319,9 +319,13 @@ class cia
         }
         else if (addr==0xdd00)
         {
-			//return (this.dataPortA | (~this.datadirregA))&0x3f;
-            //var r=Math.floor(Math.random()*0xff)&0xfc;
-			return 0xc0|(this.dataPortA | (~this.datadirregA))&0x3f;
+            /*const via1out=this.viaptr.readVIARegister(0x1800);
+            const dataout=(via1out>>1)&1;
+            const clockout=(via1out>>3)&1;
+            const serialBits=(dataout<<7)|(clockout<<6);
+			return (serialBits&0xc0)|((this.dataPortA | (~this.datadirregA))&0x3f);*/
+            return (this.viaptr.readSerialBus()&0xfc)
+            |((this.dataPortA | (~this.datadirregA))&0x03);
         }
         else if (addr==0xdc01)
         {
@@ -440,7 +444,7 @@ class cia
                 Bit #7: Serial bus DATA IN; 0 = Low; 1 = High.                
                 */
 
-
+                this.viaptr.writeSerialBus(value);
             }
         }
         else if (addr==0xdc00)
