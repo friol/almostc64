@@ -34,6 +34,7 @@ var glbCPU;
 var glbMMU;
 var glbDiskCPU;
 var glbDiskMMU;
+var glbFdcController;
 
 var filterStrength = 20;
 var frameTime = 0, lastLoop = new Date, thisLoop;
@@ -196,9 +197,9 @@ function startupFunction()
 	vicChip.setCPU(glbCPU);
 	vicChip.setMMU(glbMMU);
 
-	var fdcController=new fdc1541();
-	var viaChip1=new via(1,fdcController);
-	var viaChip2=new via(2,fdcController);
+	glbFdcController=new fdc1541();
+	var viaChip1=new via(1,glbFdcController);
+	var viaChip2=new via(2,glbFdcController);
 	glbDiskMMU=new disk1541mmu(viaChip1,viaChip2);
 	glbDiskCPU=new cpu6510(glbDiskMMU);
 
@@ -441,6 +442,7 @@ function startupFunction()
 					ciaChip2.update(elcyc,glbCPU);
 					sidChip.step(glbCPU.totCycles);
 					glbDiskCPU.executeOneOpcode();
+					glbFdcController.step();
 					var chRasterLine=vicChip.updateVic(elcyc,glbCPU);
 					if (chRasterLine)
 					{

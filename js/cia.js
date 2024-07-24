@@ -324,8 +324,15 @@ class cia
             const clockout=(via1out>>3)&1;
             const serialBits=(dataout<<7)|(clockout<<6);
 			return (serialBits&0xc0)|((this.dataPortA | (~this.datadirregA))&0x3f);*/
-            return (this.viaptr.readSerialBus()&0xfc)
-            |((this.dataPortA | (~this.datadirregA))&0x03);
+
+            //return (this.viaptr.readSerialBus()&0xfc)
+            //|((this.dataPortA | (~this.datadirregA))&0x03);
+
+            const serialData=this.viaptr.serialData;
+            const serialClock=this.viaptr.serialClock;
+
+            const retval=(serialClock<<6)|(serialData<<7);
+            return retval|((this.dataPortA | (~this.datadirregA))&0x03);
         }
         else if (addr==0xdc01)
         {
@@ -432,9 +439,9 @@ class cia
         if (addr==0xdd00)
         {
             this.dataPortA=value;
-            if ((this.ciaId==2)&&(addr==0xdd00))
+            if (this.ciaId==2)
             {
-                // dd00 is the serial bus with the disk drive
+                // dd00 is connected to the IEC serial bus
                 /*
                 Bit #3: Serial bus ATN OUT; 0 = High; 1 = Low.
                 Bit #4: Serial bus CLOCK OUT; 0 = High; 1 = Low.
@@ -444,7 +451,21 @@ class cia
                 Bit #7: Serial bus DATA IN; 0 = Low; 1 = High.                
                 */
 
-                this.viaptr.writeSerialBus(value);
+                var dataOut=((value>>5)&0x01); 
+                var clockOut=((value>>4)&0x01);
+                var atnOut=((value>>3)&0x01);
+
+                // the bits are inverted when sent to the serial... is this correct?
+                /*if (dataOut==0) dataOut=1;
+                else dataOut=0;
+                if (clockOut==0) clockOut=1;
+                else clockOut=0;
+                if (atnOut==0) atnOut=1;
+                else atnOut=0;*/
+
+                this.viaptr.writeSerialBus(dataOut,clockOut,atnOut);
+
+                console.log("CIA 2::wrote to IEC data:"+dataOut+" clock:"+clockOut+" atn:"+atnOut);
             }
         }
         else if (addr==0xdc00)

@@ -4,7 +4,7 @@ class fdc1541
 {
     constructor()
     {
-
+        this.spinCounter=0;
     }
 
     moveHeadIn()
@@ -15,5 +15,21 @@ class fdc1541
     moveHeadOut()
     {
         console.log("fdc::head moves out");
+    }
+
+    syncFound()
+    {
+        if (this.spinCounter>=10000)
+        {
+            this.spinCounter=0;
+            return 0x80;            
+        }
+
+        return 0x00;
+    }
+
+    step()
+    {
+        this.spinCounter+=1;
     }
 }

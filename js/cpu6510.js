@@ -2915,7 +2915,7 @@ class cpu6510
 
         if ((this.x==undefined)||(this.y==undefined)||(this.a==undefined)||(this.pc==undefined)||(this.sp==undefined))
         {
-            alert("x,y,a,pc or sp undefined");
+            console.log("CPU 6510: x,y,a,pc or sp undefined "+this.x+" "+this.y+" "+this.a+" "+this.pc+" "+this.sp);
         }
 
         if (!jumped) this.pc+=this.instructionTable[nextOpcode][0];

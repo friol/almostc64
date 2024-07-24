@@ -74,7 +74,19 @@ class disk1541mmu
             // ROM
             return this.diskROM[addr-0xc000];
         }
-
+        else if ((addr>=0x1800)&&(addr<=0x1bff))
+        {
+            return this.viaChip1.readVIARegister(addr);            
+        }
+        else if ((addr>=0x1c00)&&(addr<=0x1fff))
+        {
+            return this.viaChip2.readVIARegister(addr);            
+        }
+        else
+        {
+            console.log("1541::Unmapped read from ["+addr.toString(16).padStart(4,'0')+"]");
+        }
+    
         return 0;
     }
 
@@ -111,7 +123,7 @@ class disk1541mmu
         }
         addr&=0xffff;
 
-        if (!(addr & 0x1800))
+        if (addr<=0xfff)
         {
             // disk drive RAM
             this.diskRAM[addr&0x07FF]=value;
@@ -120,7 +132,7 @@ class disk1541mmu
         {
             this.viaChip1.writeVIARegister(addr,value);            
         }
-        else if ((addr>=0x1c00)&&(addr<=0xffff))
+        else if ((addr>=0x1c00)&&(addr<=0x1fff))
         {
             this.viaChip2.writeVIARegister(addr,value);            
         }

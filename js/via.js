@@ -11,10 +11,26 @@ class via
         this.ddrA=0;
         this.ddrB=0;
 
+        this.ifr=0;
+        this.ier=0;
+        this.pcr=0;
+        this.acr=0;
+        this.t1l=0xffff;
+        this.t1c=0xffff;
+        this.t1r = 0;
+        this.t1r = 0;
+        this.t1t = 0;
+        this.pb7 = 0x80;
+        this.pb7trigger = false;
+
+        this.IRQM_T1 = 0x40;
+
         this.fdc=fdcCtrl;
 
-        // for now, only one device attached: disk #8
-        this.serialBus=0x85;
+        // IEC BUS
+        this.serialData=0;
+        this.serialClock=0;
+        this.serialAtn=0;
     }
 
     linkCia(cia)
@@ -22,14 +38,11 @@ class via
         this.cia=cia;
     }
 
-    writeSerialBus(value)
+    writeSerialBus(data,clock,atn)
     {
-        this.serialBus=value;
-    }
-
-    readSerialBus()
-    {
-        return this.serialBus;
+        this.serialData=data;
+        this.serialClock=clock;
+        this.serialAtn=atn;
     }
 
     readVIARegister(addr)
@@ -42,7 +55,7 @@ class via
             //console.log("Reading VIA #1 0x1800");
 
             const devnr=0; // drive fixed to 8 for now
-            const serial_bus = this.serialBus;
+            /*const serial_bus = this.serialBus;
             const serial_state =  (serial_bus >> 7)		// DATA
                                         |((serial_bus >> 4) & 0x04)	// CLK
                                         |((this.serialBus << 3) & 0x80); // ATN OUT -> DATA
@@ -50,9 +63,53 @@ class via
             return (this.portB & this.ddrB)
                 | (serial_state ^ 0x85) 
                 | devnr | 0x1A; 
-                //| ((via[0].pb7 ^ 0x80) & via[0].acr & 0x80)) & ~via[0].ddrb) ;
-        }
+                //| ((via[0].pb7 ^ 0x80) & via[0].acr & 0x80)) & ~via[0].ddrb) ;*/
 
+            var retval=0;
+            retval|=(this.serialData&0x01);
+            retval|=((this.serialClock<<2));
+            retval|=((this.serialAtn<<7));
+            return (this.portB & ~this.ddrB)
+            | (retval ^ 0x85) 
+            | devnr | 0x1A;
+        }
+        else if (addr==0x1801)
+        {
+            return (this.portA & ~this.ddrA);
+        }
+        else if (addr==0x1c00)
+        {
+            return (this.portB & this.ddrB)| 
+            (this.fdc.syncFound() & ~this.ddrB);
+        }
+        else if (addr==0x1c0f)
+        {
+            // return fdc->readGCRByte();
+            const k=Math.floor(Math.random()*255);            
+            return k;
+        }
+        else if ((addr==0x1804)||(addr==0x1c04))
+        {
+            // Clear T1 IRQ flag
+            this.ifr &= ~this.IRQM_T1;
+            //checkIrqCallback(callBackParam, ifr & ier);
+            return this.t1c & 0xFF;            
+        }
+        else if ((addr==0x1807)||(addr==0x1c07))
+        {
+            return this.t1l >> 8;
+        }
+        else if ((addr==0x180c)||(addr==0x1c0c))
+        {
+            return this.pcr;            
+        }
+        else
+        {
+            console.log("VIA "+this.viaId.toString()+"::Unmapped read from register ["+addr.toString(16)+"]");
+        }
+   
+
+        return 0;
     }
 
     writeVIARegister(addr,value)
@@ -87,11 +144,6 @@ class via
 
             this.portB = value & 0xEF;
 
-            const rbyte = ~this.portB & this.ddrB;
-
-            // DATA (including ATN acknowledge)
-            this.serialBus = ((rbyte << 6) & ((~rbyte ^ this.serialBus) << 3) & 0x80)	// DATA+ATN
-                          |((rbyte << 3) & 0x40); // CLK            
             //console.log("VIA "+this.viaId.toString()+"::write to serial bus value ["+this.serialBus.toString(16)+"]");
         }
         else if (addr==0x1800)
@@ -99,6 +151,9 @@ class via
             // write port B TODO review
             console.log("VIA "+this.viaId.toString()+"::write to port B value ["+value.toString(16)+"]");
             this.portB=value;
+
+            this.serialData=(value>>1)&0x01;
+            this.serialClock=(value>>3)&0x01;
         }
         else if ((addr==0x1801)||(addr==0x1c01))
         {
@@ -113,9 +168,57 @@ class via
         {
             this.ddrA=value;            
         }
+        else if ((addr==0x1805)||(addr==0x1c05))
+        {
+            // write T1 high order counter, read from low order latch
+            this.t1l = (this.t1l & 0xFF) | (value << 8);
+            // trigger a reload
+            this.t1r = 1;
+            // Clear T1 IRQ
+            this.ifr &= ~this.IRQM_T1;
+            //checkIrqCallback(callBackParam, ifr & ier);
+            this.t1t = 0;
+            // PB7 square wave output
+            // if PB7 is programmed as a T1 output it will go low on the phi2 following the write operation
+            if (this.acr & 0xC0) 
+            {
+                this.pb7 = 0;
+                this.pb7trigger = false;
+            }
+        }
+        else if ((addr==0x1806)||(addr==0x1c06))
+        {
+            this.t1l = (this.t1l & 0xFF00) | value;
+        }
+        else if ((addr==0x1807)||(addr==0x1c07))
+        {
+            // write T1 high order latch
+            this.t1l = (this.t1l & 0xFF) | (value << 8);
+            // despite what official docs state, it does clear the interrupt flag
+            this.ifr &= ~this.IRQM_T1;
+            //checkIrqCallback(callBackParam, ifr & ier);
+        }
+        else if ((addr==0x180b)||(addr==0x1c0b))
+        {
+            this.acr=value;            
+        }
+        else if ((addr==0x180c)||(addr==0x1c0c))
+        {
+            this.pcr=value;            
+        }
+        else if ((addr==0x180d)||(addr==0x1c0d))
+        {
+            this.ifr &= ~(value | 0x80);
+            //checkIrqCallback(callBackParam, ifr & ier & 0x7F);        
+        }
+        else if ((addr==0x180e)||(addr==0x1c0e))
+        {
+            if (value & 0x80) this.ier |= value & 0x7F;
+            else this.ier &= ~value;            
+        }
         else
         {
-            //console.log("VIA "+this.viaId.toString()+"::Unmapped write to register ["+addr.toString(16)+"]");
+            console.log("VIA "+this.viaId.toString()+"::Unmapped write to register ["+addr.toString(16)+"]");
         }
     }
 }
