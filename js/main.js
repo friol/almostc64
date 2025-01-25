@@ -35,6 +35,7 @@ var glbMMU;
 var glbDiskCPU;
 var glbDiskMMU;
 var glbFdcController;
+var glbViaChip1,glbViaChip2;
 
 var filterStrength = 20;
 var frameTime = 0, lastLoop = new Date, thisLoop;
@@ -182,6 +183,11 @@ function waitForLoad()
 	}
 }
 
+function setVFlag()
+{
+	glbDiskCPU.flagsV=1;
+}
+
 function startupFunction()
 {
 	globalEmuStatus=2;
@@ -198,13 +204,19 @@ function startupFunction()
 	vicChip.setMMU(glbMMU);
 
 	glbFdcController=new fdc1541();
-	var viaChip1=new via(1,glbFdcController);
-	var viaChip2=new via(2,glbFdcController);
-	glbDiskMMU=new disk1541mmu(viaChip1,viaChip2);
+	glbViaChip1=new via(1,glbFdcController);
+	glbViaChip2=new via(2,glbFdcController);
+	glbDiskMMU=new disk1541mmu(glbViaChip1,glbViaChip2,ciaChip1,ciaChip2,glbFdcController);
 	glbDiskCPU=new cpu6510(glbDiskMMU);
 
-	ciaChip2.linkVia(viaChip1);
-	viaChip1.linkCia(ciaChip2);
+	glbViaChip1.linkCpu(glbDiskCPU);
+	glbViaChip2.linkCpu(glbDiskCPU);
+
+	ciaChip1.link1541MMU(glbDiskMMU);
+	ciaChip2.link1541MMU(glbDiskMMU);
+
+	ciaChip2.linkVia(glbViaChip1);
+	glbViaChip1.linkCia(ciaChip2);
 
 	var rad = document.joyform.joySelection;
 	var prev = null;
@@ -261,6 +273,11 @@ function startupFunction()
 			ciaChip2.update(elcyc,glbCPU);
 			vicChip.updateVic(elcyc,glbCPU);
 			sidChip.step(glbCPU.totCycles);
+
+			var elcycDisk=glbDiskCPU.executeOneOpcode();
+			glbViaChip1.countTimer(elcycDisk);
+			glbViaChip2.countTimer(elcycDisk);
+			glbDiskMMU.updateCycles(glbDiskCPU.totCycles);
 		}
 		else if (e.key=="PageUp")
 		{
@@ -411,7 +428,7 @@ function startupFunction()
 		ctx.fillStyle = "black";
 		ctx.font = "10px Arial";
 		ctx.fillText("Welcome to the almostC64 emulator. To start, click on the \"play\" button.", 10, 20);
-		ctx.fillText("You can load a .prg file and run it or start a game/cracktro from the selector below.", 10, 32);
+		ctx.fillText("You can load prg/g64 files or start a game/cracktro from the selector below.", 10, 32);
 		ctx.fillText("You can choose which joystick to use (joystick is controlled with cursor keys and CTRL).", 10, 44);
 	}
 
@@ -422,9 +439,12 @@ function startupFunction()
 			if (globalEmuStatus==0)
 			{
 				globalListOfOpcodes=new Array();
-				glbCPU.debugOpcodes(24,globalListOfOpcodes);
-				
-				glbCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
+
+				glbDiskCPU.debugOpcodes(24,globalListOfOpcodes);
+				glbDiskCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
+				//glbCPU.debugOpcodes(24,globalListOfOpcodes);
+				//glbCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
+
 				//vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2);
 
 				for (var i=0;i<=294;i++)
@@ -441,8 +461,11 @@ function startupFunction()
 					ciaChip1.update(elcyc,glbCPU);
 					ciaChip2.update(elcyc,glbCPU);
 					sidChip.step(glbCPU.totCycles);
-					glbDiskCPU.executeOneOpcode();
-					glbFdcController.step();
+					var elcycDisk=glbDiskCPU.executeOneOpcode();
+					glbViaChip1.countTimer(elcycDisk);
+					glbViaChip2.countTimer(elcycDisk);
+					glbDiskMMU.updateCycles(glbDiskCPU.totCycles);
+
 					var chRasterLine=vicChip.updateVic(elcyc,glbCPU);
 					if (chRasterLine)
 					{
@@ -511,51 +534,59 @@ function handleFileUpload(fls)
 	fileReader.onload = function(event) 
 	{
 		var fname=document.getElementById("prgSelector").value;
+		let lowerFname=fname.toLowerCase();
 
-		if ((fname.indexOf(".prg")<0)&&(fname.indexOf(".PRG")<0)&&(fname.indexOf(".")>0))
+		if ((lowerFname.indexOf(".prg")<0)&&(lowerFname.indexOf(".g64")<0)&&(lowerFname.indexOf(".")>0))
 		{
-			alert("You can only load .prg files");
+			alert("You can only load .prg or .g64 files");
 			return;
 		}
 
 		arrayBuffer = event.target.result;
 		var uint8ArrayNew  = new Uint8Array(arrayBuffer);
 
-		var loadAddr=((uint8ArrayNew[1]) << 8) | uint8ArrayNew[0];
-
-		var offset=0;
-		for (var i = 2; i < uint8ArrayNew.length; i++) 
+		if (lowerFname.indexOf(".g64")>0)
 		{
-			glbMMU.writeAddr(loadAddr - 2 + i,uint8ArrayNew[i]);
-			offset+=1;
+			glbFdcController.loadG64image(uint8ArrayNew);			
 		}
+		else if (lowerFname.indexOf(".prg")>0)
+		{
+			var loadAddr=((uint8ArrayNew[1]) << 8) | uint8ArrayNew[0];
 
-		// if loaded a BASIC program,update pointers
-		if (loadAddr == 0x0801)
-		{
-			var varstart = loadAddr + offset;
-			glbMMU.writeAddr(0x002D,(varstart & 0xff));
-			glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
-			glbMMU.writeAddr(0x002F,(varstart & 0xff));
-			glbMMU.writeAddr(0x0030,((varstart >> 8) & 0xff));
-			glbMMU.writeAddr(0x0031,(varstart & 0xff));
-			glbMMU.writeAddr(0x0032,((varstart >> 8) & 0xff));
-		}		
-		else
-		{
-			//alert("Doesn't seem to be a BASIC program");
+			var offset=0;
+			for (var i = 2; i < uint8ArrayNew.length; i++) 
+			{
+				glbMMU.writeAddr(loadAddr - 2 + i,uint8ArrayNew[i]);
+				offset+=1;
+			}
+
+			// if loaded a BASIC program,update pointers
+			if (loadAddr == 0x0801)
+			{
+				var varstart = loadAddr + offset;
+				glbMMU.writeAddr(0x002D,(varstart & 0xff));
+				glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
+				glbMMU.writeAddr(0x002F,(varstart & 0xff));
+				glbMMU.writeAddr(0x0030,((varstart >> 8) & 0xff));
+				glbMMU.writeAddr(0x0031,(varstart & 0xff));
+				glbMMU.writeAddr(0x0032,((varstart >> 8) & 0xff));
+			}		
+			else
+			{
+				//alert("Doesn't seem to be a BASIC program");
+			}
+
+			// run program
+
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'r'}));},100);
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'r'}));},150);
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'u'}));},200);
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'u'}));},250);
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'n'}));},300);
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'n'}));},350);
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'Enter'}));},400);
+			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'Enter'}));},450);
 		}
-
-		// run program
-
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'r'}));},100);
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'r'}));},150);
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'u'}));},200);
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'u'}));},250);
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'n'}));},300);
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'n'}));},350);
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'Enter'}));},400);
-		window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'Enter'}));},450);
 	
 	};
 	fileReader.readAsArrayBuffer(fls[0]);	

@@ -405,4 +405,9 @@ class c64mmu
     {
         console.log("%cWarning: unhandled write 16 bit to MMU","color:#E3823D");    
     }
+
+    checkSO()
+    {
+        return false;
+    }
 }

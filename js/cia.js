@@ -9,6 +9,9 @@ class cia
         this.icr1=0;
         this.sdr=0;
 
+        this.pa_in=0;
+        this.pb_in=0;
+
         this.viaptr=undefined;
 
         this.ciatod=new tod();
@@ -32,6 +35,8 @@ class cia
         this.datadirregA=0;
         this.datadirregB=0;
         this.controlReg2=0;
+
+        this.IECLines=0x38;
 
         this.curJoystick=1;
 
@@ -71,6 +76,11 @@ class cia
     linkVia(v)
     {
         this.viaptr=v;
+    }
+
+    link1541MMU(c)
+    {
+        this.mmu1541=c;
     }
 
     keyPress(kv)
@@ -308,10 +318,37 @@ class cia
         return 3-(~(this.dataPortA | (~this.datadirregA)) & 0x03);
     }
 
+	SetPAIn(ubyte) 
+    { 
+        this.pa_in = ubyte; 
+    }
+
+	SetPBIn(ubyte) 
+    { 
+        this.pb_in = ubyte; 
+    }
+
     readCIARegister(addr)
     {
         if (this.ciaId==1) addr = (addr%0x10) | 0xdc00;
         if (this.ciaId==2) addr = (addr%0x10) | 0xdd00;
+
+        if (this.ciaId==2)
+        {
+            let ciareg=addr%0x10;
+            if (ciareg==0)
+            {
+                let inbyte = ((this.mmu1541.CalcIECLines() & 0x30) << 2)	// DATA and CLK from bus
+                        | 0x3f;			
+                //console.log("setPAin:"+inbyte);								// Other lines high
+                inbyte&=0xff;
+                this.SetPAIn(inbyte);
+            }
+            else if (ciareg==1)
+            {
+                this.SetPBIn(0xff);
+            }
+        }
 
         if (addr==0xdc00)
         {
@@ -319,20 +356,7 @@ class cia
         }
         else if (addr==0xdd00)
         {
-            /*const via1out=this.viaptr.readVIARegister(0x1800);
-            const dataout=(via1out>>1)&1;
-            const clockout=(via1out>>3)&1;
-            const serialBits=(dataout<<7)|(clockout<<6);
-			return (serialBits&0xc0)|((this.dataPortA | (~this.datadirregA))&0x3f);*/
-
-            //return (this.viaptr.readSerialBus()&0xfc)
-            //|((this.dataPortA | (~this.datadirregA))&0x03);
-
-            const serialData=this.viaptr.serialData;
-            const serialClock=this.viaptr.serialClock;
-
-            const retval=(serialClock<<6)|(serialData<<7);
-            return retval|((this.dataPortA | (~this.datadirregA))&0x03);
+            return ((this.dataPortA&this.datadirregA) | (this.pa_in & ~this.datadirregA));
         }
         else if (addr==0xdc01)
         {
@@ -431,6 +455,23 @@ class cia
         }
     }
 
+    PAOut() 
+    { 
+        return this.dataPortA | (~this.datadirregA); 
+    }
+
+    write_pa(val)
+    {
+        let old_lines = this.IECLines;
+        this.IECLines = (val & 0x38)&0xff;
+    
+        if ((this.IECLines ^ old_lines) & 0x08) {	// ATN changed
+            if (old_lines & 0x08) {				// ATN 1->0
+                this.viaptr.TriggerCA1Interrupt();
+            }
+        }
+    }
+
     writeCIARegister(addr,value)
     {
         if (this.ciaId==1) addr = (addr%0x10) | 0xdc00;
@@ -439,34 +480,6 @@ class cia
         if (addr==0xdd00)
         {
             this.dataPortA=value;
-            if (this.ciaId==2)
-            {
-                // dd00 is connected to the IEC serial bus
-                /*
-                Bit #3: Serial bus ATN OUT; 0 = High; 1 = Low.
-                Bit #4: Serial bus CLOCK OUT; 0 = High; 1 = Low.
-                Bit #5: Serial bus DATA OUT; 0 = High; 1 = Low.
-
-                Bit #6: Serial bus CLOCK IN; 0 = Low; 1 = High.
-                Bit #7: Serial bus DATA IN; 0 = Low; 1 = High.                
-                */
-
-                var dataOut=((value>>5)&0x01); 
-                var clockOut=((value>>4)&0x01);
-                var atnOut=((value>>3)&0x01);
-
-                // the bits are inverted when sent to the serial... is this correct?
-                /*if (dataOut==0) dataOut=1;
-                else dataOut=0;
-                if (clockOut==0) clockOut=1;
-                else clockOut=0;
-                if (atnOut==0) atnOut=1;
-                else atnOut=0;*/
-
-                this.viaptr.writeSerialBus(dataOut,clockOut,atnOut);
-
-                console.log("CIA 2::wrote to IEC data:"+dataOut+" clock:"+clockOut+" atn:"+atnOut);
-            }
         }
         else if (addr==0xdc00)
         {
@@ -610,7 +623,7 @@ class cia
         else if ((addr==0xdc0f)||(addr==0xdd0f))
         {
             this.controlReg2=value&0xef;
-            console.log("CIA "+this.ciaId.toString()+"::wrote to control reg Dx0f "+value.toString(2));
+            //console.log("CIA "+this.ciaId.toString()+"::wrote to control reg Dx0f "+value.toString(2));
 
             if ((this.controlReg2 & 0x01) == 0x01) this.timerBisRunning = true;
             else this.timerBisRunning = false;
@@ -618,6 +631,14 @@ class cia
         else
         {
             console.log("CIA "+this.ciaId.toString()+"::Unmapped write to register ["+addr.toString(16)+"]");
+        }
+
+        if (this.ciaId==2)
+        {
+            if (((addr&0x0f)==0)||((addr&0x0f)==2))
+            {
+                this.write_pa(~this.PAOut());
+            }
         }
     }
 }

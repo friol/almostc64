@@ -17,6 +17,9 @@ class cpu6510
         this.vicIrqPending=false;
         this.ciaIrqPending=false;
         
+        this.via1IrqPending=false;
+        this.via2IrqPending=false;
+        
         this.CPUstarted=false;
 
         // instr. table - instr. dimension in bytes, instr. cycles
@@ -309,7 +312,9 @@ class cpu6510
         ctx.fillText("NVxBDIZC", px+540, initialpy+fontSpace*3);
         ctx.fillText(this.getFlagsString(), px+540, initialpy+fontSpace*4);
         ctx.fillText("Total CPU cycles:"+this.totCycles.toString(16), px+540, initialpy+fontSpace*5);
-        ctx.fillText("Port config:"+this.mmu.processorPortReg.toString(16), px+540, initialpy+fontSpace*6);
+
+        // TODO: this is only for C64's 6510
+        //ctx.fillText("Port config:"+this.mmu.processorPortReg.toString(16), px+540, initialpy+fontSpace*6);
 
         // moused line
         if ((this.mousePosy>=initialpy)&&(this.mousePosx<512)&&(this.mousePosy<(25*fontSpace)))
@@ -317,7 +322,6 @@ class cpu6510
             ctx.strokeStyle="gray";
             ctx.strokeRect(px,5-(fontSpace*3)+initialpy+Math.floor((this.mousePosy+initialpy)/fontSpace)*fontSpace, 512, fontSpace-2);
         }
-
     }
 
     traceLog()
@@ -565,6 +569,12 @@ class cpu6510
 
         var tmp = 0x20;
         if (this.flagsN) tmp |= 0x80;
+
+        if (this.mmu.checkSO())
+        {
+            this.flagsV=1;
+        }
+
         if (this.flagsV) tmp |= 0x40;
         //if (this.flagsB) tmp |= 0x10; // FIXXX?
         if (this.flagsD) tmp |= 0x08;
@@ -585,7 +595,7 @@ class cpu6510
     {
         var elapsedCycles=0;
 
-        if (this.nmiPending||this.vicIrqPending||this.ciaIrqPending)
+        if (this.nmiPending||this.vicIrqPending||this.ciaIrqPending||this.via1IrqPending||this.via2IrqPending)
         {
             if (this.nmiPending) 
             {
@@ -597,6 +607,9 @@ class cpu6510
             {
                 if (this.ciaIrqPending) this.ciaIrqPending=false;
                 if (this.vicIrqPending) this.vicIrqPending=false;
+                
+                if (this.via1IrqPending) this.via1IrqPending=false;
+                if (this.via2IrqPending) this.via2IrqPending=false;
 
                 this.irqNmiJump(0xfffe);
                 elapsedCycles+=7;
@@ -622,6 +635,12 @@ class cpu6510
 
                 var tmp = 0x20;
                 if (this.flagsN) tmp |= 0x80;
+
+                if (this.mmu.checkSO())
+                {
+                    this.flagsV=1;
+                }
+    
                 if (this.flagsV) tmp |= 0x40;
                 tmp|=0x10;
                 if (this.flagsD) tmp |= 0x08;
@@ -732,6 +751,12 @@ class cpu6510
                 // PHP
                 var tmp = 0x20;
                 if (this.flagsN) tmp |= 0x80;
+
+                if (this.mmu.checkSO())
+                {
+                    this.flagsV=1;
+                }
+            
                 if (this.flagsV) tmp |= 0x40;
                 /*if (this.flagsB)*/ tmp |= 0x10;
                 if (this.flagsD) tmp |= 0x08;
@@ -1567,6 +1592,11 @@ class cpu6510
             }
             case 0x50:
             {
+                if (this.mmu.checkSO())
+                {
+                    this.flagsV=1;
+                }
+            
                 // BVC offset
                 if (this.flagsV==0)
                 {
@@ -1876,6 +1906,11 @@ class cpu6510
             }
             case 0x70:
             {
+                if (this.mmu.checkSO())
+                {
+                    this.flagsV=1;
+                }
+            
                 // BVS offset
                 if (this.flagsV==1)
                 {
