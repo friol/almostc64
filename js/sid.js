@@ -86,7 +86,7 @@ class sid
             //this.audioEnabled=false;
             //return;
 
-            this.audioBufSize=1024;
+            this.audioBufSize=2048;
 
             var self=this;
             this.webAudioAPIsupported=true;

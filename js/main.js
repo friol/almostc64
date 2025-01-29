@@ -1,34 +1,37 @@
 
 /* 
 
-Almost C64 emulator - main.js 
+	Almost C64 emulator - (c) friol 2o21-2o25
 
-IN PROGRESS:
-- 1541 emulation
+	IN PROGRESS:
+	- CPU undoc opcodes tests
+	- verify cycles
 
-TODO:
-- spr/background collision
-- undocumented opcodes
-- ADSR envelopes
-- sid filters
+	TODO:
+	- spr/background collision
+	- undocumented opcodes
+	- ADSR envelopes
+	- sid filters
 
-DONE:
-- all documented opcodes tested against Lorenz test suite
-- fix delta instruction c3
-- sprite priority d01b
-- performance: screen buffer as an array of bytes, then blit to RGBA
-- x scrolling, 38/40 cols
-- y scrolling, 24 rows (some games like boulder dash and up'n'down don't scroll properly)
-- spr/spr collisions
-- SID digis
+	DONE:
+	- 1541 emulation, g64/partial d64 loading
+	- all documented opcodes tested against Lorenz test suite
+	- fix delta instruction c3
+	- sprite priority d01b
+	- performance: screen buffer as an array of bytes, then blit to RGBA
+	- x scrolling, 38/40 cols
+	- y scrolling, 24 rows (some games like boulder dash and up'n'down don't scroll properly)
+	- spr/spr collisions
+	- SID digis
 
 */
 
 var globalListOfOpcodes;
 var globalEmuStatus=0; // 0 debugging single step, 1 running
 var globalOldCyc=0;
-var glbTargetTimeout=10;
+var glbTargetTimeout=13;
 var glbAdjustFpsCounter=0;
+var glbMaxSpeed=false;
 
 var glbCPU;
 var glbMMU;
@@ -43,128 +46,38 @@ var fpsArray=new Array();
 
 var glbPlayColor="black";
 
-var glbProgList=[
-//"alrb",                                                                 
-//"ancb",                                                                 
-//"aneb",                                                                 
-//"arrb",                                                                 
-//"asoa",                                                                 
-//"asoax",                                                                
-//"asoay",                                                                
-//"asoix",                                                                
-//"asoiy",                                                                
-//"asoz",                                                                 
-//"asozx",                                                                
-//"axsa",                                                                 
-//"axsix",                                                                
-//"axsz",                                                                 
-//"axszy",                                                                
-//"bccr",                                                                 
-//"bcsr",                                                                 
-//"branchwrap",                                                           
-//"cia1pb6",                                                              
-//"cia1pb7",                                                              
-//"cia1ta",                                                               
-//"cia1tab",                                                              
-//"cia1tb",                                                               
-//"cia1tb123",                                                            
-//"cia2pb6",                                                              
-//"cia2pb7",                                                              
-//"cia2ta",                                                               
-//"cia2tb",                                                               
-//"cia2tb123",                                                            
-//"cntdef",                                                               
-//"cnto2",                                                                
-//"cpuport",                                                              
-//"cputiming",                                                            
-//"dcma",                                                                 
-//"dcmax",                                                                
-//"dcmay",                                                                
-//"dcmix",                                                                
-//"dcmiy",                                                                
-//"dcmz",                                                                 
-//"dcmzx",                                                                
-//"flipos",                                                               
-//"icr01",                                                                
-//"imr",                                                                  
-//"insa",                                                                 
-//"insax",                                                                
-//"insay",                                                                
-//"insix",                                                                
-//"insiy",                                                                
-//"insz",                                                                 
-//"inszx",                                                                
-//"irq",                                                                  
-//"lasay",                                                                
-//"laxa",                                                                 
-//"laxay",                                                                
-//"laxix",                                                                
-//"laxiy",                                                                
-//"laxz",                                                                 
-//"laxzy",                                                                
-//"loadth",                                                               
-//"lsea",                                                                 
-//"lseax",                                                                
-//"lseay",                                                                
-//"lseix",                                                                
-//"lseiy",                                                                
-//"lsez",                                                                 
-//"lsezx",                                                                
-//"lxab",                                                                 
-//"nmi",                                                                  
-//"nopax",                                                                
-//"nopb",                                                                 
-//"nopn",                                                                 
-//"nopz",                                                                 
-//"nopzx",                                                                
-//"oneshot",                                                              
-//"rlaa",                                                                 
-//"rlaax",                                                                
-//"rlaay",                                                                
-//"rlaix",                                                                
-//"rlaiy",                                                                
-//"rlaz",                                                                 
-//"rlazx",                                                                
-//"rraa",                                                                 
-//"rraax",                                                                
-//"rraay",                                                                
-//"rraix",                                                                
-//"rraiy",                                                                
-//"rraz",                                                                 
-//"rrazx",                                                                
-//"shaay",                                                                
-//"shaiy",                                                                
-//"shsay",                                                                
-//"shxay",                                                                
-//"shyax",                                                                
-//"trap1",                                                                
-//"trap10",                                                               
-//"trap11",                                                               
-//"trap12",                                                               
-//"trap13",                                                               
-//"trap14",                                                               
-//"trap15",                                                               
-//"trap16",                                                               
-//"trap17",                                                               
-//"trap2",                                                                
-//"trap3",                                                                
-//"trap4",                                                                
-//"trap5",                                                                
-//"trap6",                                                                
-//"trap7",                                                                
-//"trap8",                                                                
-//"trap9",                                                                
-//"tsxn",                                                                 
-//"txan",                                                                 
-//"txsn",                                                                 
-//"tyan"                                                                 
+//
+//
+//
+
+function runTHTests()
+{
+    const documentedOpcodes=[
+		0x10,0x11,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,0x20,0x21,0x24,0x25,0x26,0x28,0x29,0x2A,0x2C,0x2D,
+		0x2E,0x30,0x31,0x35,0x36,0x38,0x39,0x3C,0x3D,0x3E,0x40,0x41,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,0x4E,0x50,0x51,
+		0x55,0x56,0x58,0x59,0x5A,0x5D,0x5E,0x5F,0x60,0x61,0x65,0x66,0x68,0x69,0x6A,0x6C,0x6D,0x6E,0x70,0x71,0x75,0x76,0x78,0x79,0x7D,
+		0x7E,0x80,0x81,0x82,0x84,0x85,0x86,0x87,0x88,0x8A,0x8C,0x8E,0x8D,0x8F,0x90,0x91,0x94,0x95,0x96,0x98,0x99,0x9A,0x9D,0xA0,0xA1,
+		0xA2,0xA4,0xA5,0xA6,0xA7,0xA8,0xA9,0xAA,0xAB,0xAC,0xAD,0xAE,0xAF,0xB0,0xB1,0xB3,0xB4,0xB5,0xB6,0xB7,0xB8,0xB9,0xBA,0xBC,0xBD,
+		0xBE,0xC0,0xC1,0xC3,0xC4,0xC5,0xC6,0xC7,0xC8,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xD0,0xD1,0xD4,0xD5,0xD6,0xD8,0xD9,0xDD,0xDE,0xE0,
+		0xE1,0xE4,0xE5,0xE6,0xE8,0xE9,0xEA,0xEB,0xEC,0xED,0xEE,0xEF,0xF0,0xF1,0xF5,0xF6,0xF8,0xF9,0xFA,0xFC,0xFD,0xFE,0xFF
 	];
-var glbProgNum=0;
 
+	const undocumentedOpcodes=[
+	];
 
-//
-//
-//
+    for (var testNum=0;testNum<documentedOpcodes.length;testNum++)
+    {
+        const testJson="tomhartetests/"+documentedOpcodes[testNum].toString(16).padStart(2,'0')+".json";
+        var testRunner=new cpuTestRunner(testJson);
+    }
+
+    for (var testNum=0;testNum<undocumentedOpcodes.length;testNum++)
+	{
+		const testJson="tomhartetests/"+undocumentedOpcodes[testNum].toString(16).padStart(2,'0')+".json";
+		var testRunner=new cpuTestRunner(testJson);
+	}
+	
+}
 
 function waitForLoad()
 {
@@ -183,9 +96,16 @@ function waitForLoad()
 	}
 }
 
-function setVFlag()
+function drawFFWDIcon()
 {
-	glbDiskCPU.flagsV=1;
+    var cnvs = document.getElementById("mainCanvass");
+    var ctx = cnvs.getContext("2d", { willReadFrequently: true });
+
+    ctx.font='10px arial';
+    ctx.fillStyle = 'white';
+    ctx.textBaseline = 'top';
+
+    ctx.fillText(">>",10,260);        
 }
 
 function startupFunction()
@@ -334,9 +254,10 @@ function startupFunction()
 			document.getElementById("mainCanvass").width=900;
 			document.getElementById("mainCanvass").height=600;
 		}
-		else if (e.key=="+")
+		else if (e.key=="\\")
 		{
-			vicChip.debugShifter+=0x10;
+			glbTargetTimeout=0;
+			glbMaxSpeed=true;
 		}
 		else
 		{
@@ -378,6 +299,12 @@ function startupFunction()
 
 	document.onkeyup = function(e)
 	{
+		if (e.key=="\\")
+		{
+			glbTargetTimeout=13;
+			glbMaxSpeed=false;
+		}
+	
 		for (const c of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") 
 		{
 			if (e.key==c) ciaChip1.keyUp(c.toLowerCase());
@@ -406,6 +333,7 @@ function startupFunction()
 	{
         var canvas = document.getElementById(cnvs);
         var ctx = canvas.getContext("2d");
+		ctx.textRendering = "optimizeLegibility";
 		
 		ctx.fillStyle = "#d0d0d0";
 		ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -428,8 +356,9 @@ function startupFunction()
 		ctx.fillStyle = "black";
 		ctx.font = "10px Arial";
 		ctx.fillText("Welcome to the almostC64 emulator. To start, click on the \"play\" button.", 10, 20);
-		ctx.fillText("You can load prg/g64 files or start a game/cracktro from the selector below.", 10, 32);
+		ctx.fillText("You can load prg/g64/d64 files or start a game/cracktro from the selector below.", 10, 32);
 		ctx.fillText("You can choose which joystick to use (joystick is controlled with cursor keys and CTRL).", 10, 44);
+		ctx.fillText("Moreover, the tilde or whatever key it is (the upper left key) unthrottles the emulation.", 10, 56);
 	}
 
 	function updateScreen()
@@ -495,6 +424,11 @@ function startupFunction()
 			}
 		}
 
+		if (glbMaxSpeed && (globalEmuStatus==1))
+		{
+			drawFFWDIcon();
+		}
+
 		// calc fps
 		var thisFrameTime = (thisLoop=new Date) - lastLoop;
 		frameTime+= (thisFrameTime - frameTime) / filterStrength;
@@ -504,24 +438,22 @@ function startupFunction()
 		var fpeez=parseInt((1000/frameTime).toFixed(1));
 		fpsOut.innerHTML = fpeez + " fps";
 
-		/*if (glbAdjustFpsCounter==100)
+		const targetFps=50; // PAL C64
+		if (!glbMaxSpeed)
 		{
-			glbAdjustFpsCounter=0;
-			if (fpeez<55)
+			if (fpeez<targetFps)
 			{
-				if (glbTargetTimeout>0) glbTargetTimeout--;
+				// accelerate!
+				if (glbTargetTimeout>1) glbTargetTimeout--;
 			}
-			else if (fpeez>55)
+			else if (fpeez>targetFps)
 			{
+				// brake!!!
 				glbTargetTimeout++;
 			}
 		}
-		else
-		{
-			glbAdjustFpsCounter++;
-		}*/
-
-		window.setTimeout(updateScreen,12);
+		
+		window.setTimeout(updateScreen,glbTargetTimeout);
 	}
 
 	updateScreen();
@@ -536,9 +468,9 @@ function handleFileUpload(fls)
 		var fname=document.getElementById("prgSelector").value;
 		let lowerFname=fname.toLowerCase();
 
-		if ((lowerFname.indexOf(".prg")<0)&&(lowerFname.indexOf(".g64")<0)&&(lowerFname.indexOf(".")>0))
+		if ((lowerFname.indexOf(".prg")<0)&&(lowerFname.indexOf(".g64")<0)&&(lowerFname.indexOf(".d64")<0)&&(lowerFname.indexOf(".")>0))
 		{
-			alert("You can only load .prg or .g64 files");
+			alert("You can only load .prg, .g64 or .d64 files");
 			return;
 		}
 
@@ -547,7 +479,11 @@ function handleFileUpload(fls)
 
 		if (lowerFname.indexOf(".g64")>0)
 		{
-			glbFdcController.loadG64image(uint8ArrayNew);			
+			glbFdcController.loadG64image(uint8ArrayNew,glbDiskCPU.totCycles);			
+		}
+		else if (lowerFname.indexOf(".d64")>0)
+		{
+			glbFdcController.loadD64image(uint8ArrayNew,glbDiskCPU.totCycles);			
 		}
 		else if (lowerFname.indexOf(".prg")>0)
 		{
@@ -651,69 +587,6 @@ function loadCracktro(th)
         
 		},
 		error: function(xhr, status, error) { alert("Error loading cracktro ["+error+"]"); }
-	});
-}
-
-function loadNextProggie()
-{
-	var thisInstance=this;
-
-	var proggo=glbProgList[glbProgNum];
-	glbProgNum++;
-
-	$.ajax({
-		url: "testsuite/"+proggo,type: "GET",processData: false,dataType: "binary",
-		success: function(data) 
-		{
-			var arrayBuffer;
-			var fileReader = new FileReader();
-			fileReader.onload = function(event) 
-			{
-				arrayBuffer = event.target.result;
-				var uint8ArrayNew  = new Uint8Array(arrayBuffer);
-
-				var loadAddr=((uint8ArrayNew[1]) << 8) | uint8ArrayNew[0];
-
-				var offset=0;
-				for (var i = 2; i < uint8ArrayNew.length; i++) 
-				{
-					glbMMU.writeAddr(loadAddr - 2 + i,uint8ArrayNew[i]);
-					offset+=1;
-				}
-		
-				// if loaded a BASIC program,update pointers
-				if (loadAddr == 0x0801)
-				{
-					var varstart = loadAddr + offset;
-					glbMMU.writeAddr(0x002D,(varstart & 0xff));
-					glbMMU.writeAddr(0x002E,((varstart >> 8) & 0xff));
-					glbMMU.writeAddr(0x002F,(varstart & 0xff));
-					glbMMU.writeAddr(0x0030,((varstart >> 8) & 0xff));
-					glbMMU.writeAddr(0x0031,(varstart & 0xff));
-					glbMMU.writeAddr(0x0032,((varstart >> 8) & 0xff));
-				}		
-				else
-				{
-					//alert("Doesn't seem to be a BASIC program");
-				}
-		
-				// run program
-		
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'r'}));},100);
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'r'}));},150);
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'u'}));},200);
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'u'}));},250);
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'n'}));},300);
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'n'}));},350);
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'Enter'}));},400);
-				window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'Enter'}));},450);
-		
-			}
-			fileReader.readAsArrayBuffer(data);                    
-
-        
-		},
-		error: function(xhr, status, error) { alert("Error loading proggie ["+error+"]"); }
 	});
 }
 

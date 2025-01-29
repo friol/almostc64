@@ -133,10 +133,6 @@ class disk1541mmu
                 {
                     inbyte |= 0x80;
                 }
-                else
-                {
-                    let sf=true;
-                }
 
                 this.viaChip2.SetPBIn(inbyte&0xff);
             }

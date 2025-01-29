@@ -5,7 +5,7 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>AlmostC64 v0.13</title>
+    <title>AlmostC64 v0.14</title>
 
     <script src="js/jquery-3.7.1.min.js"></script>
     <script src="js/utils.js"></script>
@@ -18,6 +18,8 @@
     <script src="js/c64mmu.js"></script>
     <script src="js/1541mmu.js"></script>
     <script src="js/cpu6510.js"></script>
+    <script src="js/testMMU.js"></script>
+    <script src="js/cpuTestRunner.js"></script>
     <script src="js/main.js"></script>
 
     <link rel="stylesheet" type="text/css" href="css/main.css" />
@@ -99,6 +101,10 @@
     <option value="therapy-05.prg">[Cracktro] therapy-05.prg</option>
     <option value="therapy-09.prg">[Cracktro] therapy-09.prg</option>
 </select>
+
+<br/><br/>
+<button type="button" onclick="runTHTests()">RunCPUTests</button>
+
 </span>
 
 <!--<textarea id="logText" cols="80" rows="5" style="float:left;clear:both;margin-top:10px"></textarea>-->

@@ -117,7 +117,7 @@ class via
         }
         else if ((addr&0x0f)==5)
         {
-            return this.t1c>>8;
+            return (this.t1c>>8)&0xff;
         }
         else if ((addr&0x0f)==6)
         {
@@ -125,7 +125,7 @@ class via
         }
         else if ((addr&0x0f)==7)
         {
-            return this.t1l>>8;
+            return (this.t1l>>8)&0xff;
         }
         else if ((addr&0x0f)==8)
         {
@@ -134,7 +134,7 @@ class via
         }
         else if ((addr&0x0f)==9)
         {
-            return this.t2c>>8;
+            return (this.t2c>>8)&0xff;
         }
         else if ((addr&0x0f)==0x0a)
         {
@@ -261,6 +261,10 @@ class via
         if (this.t1c<0)
         {
             this.t1c=0xffff+this.t1c;
+            if ((this.t1c<0)||(this.t1c>0xffff))
+            {
+                alert("This should not happen");
+            }
         }
 
         if ((this.t1c<0)||(this.t1c>0xffff))

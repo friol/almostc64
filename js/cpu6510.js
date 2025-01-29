@@ -32,35 +32,35 @@ class cpu6510
 
         this.instructionTable[0x00]=[1,7,`BRK`];
         this.instructionTable[0x01]=[2,6,`ORA (%d,X)`];
-        this.instructionTable[0x03]=[2,8,`SLO (%d,X)`]; // undocumented
-        this.instructionTable[0x04]=[2,3,`NOP %d`]; // undocumented
+        this.instructionTable[0x03]=[2,8,`SLO (%d,X)`]; // undocumented - tested
+        this.instructionTable[0x04]=[2,3,`NOP %d`]; // undocumented - tested
         this.instructionTable[0x05]=[2,3,`ORA %d`];
         this.instructionTable[0x06]=[2,5,`ASL %d`];
         this.instructionTable[0x07]=[2,5,`SLO %d`];
         this.instructionTable[0x08]=[1,3,`PHP`];
         this.instructionTable[0x09]=[2,2,`ORA %d`];
         this.instructionTable[0x0A]=[1,2,`ASL`];
-        this.instructionTable[0x0B]=[2,2,`ANC %d`]; // undocumented
-        this.instructionTable[0x0C]=[3,4,`NOP %d`]; // undocumented
+        this.instructionTable[0x0B]=[2,2,`ANC %d`]; // undocumented - tested
+        this.instructionTable[0x0C]=[3,4,`NOP %d`]; // undocumented - tested
         this.instructionTable[0x0D]=[3,4,`ORA %d`];
         this.instructionTable[0x0E]=[3,6,`ASL %d`];
-        this.instructionTable[0x0F]=[3,6,`SLO %d`]; // undocumented
+        this.instructionTable[0x0F]=[3,6,`SLO %d`]; // undocumented - tested
 
         this.instructionTable[0x10]=[2,2,`BPL %d`];
         this.instructionTable[0x11]=[2,5,`ORA (%d),Y`];
-        this.instructionTable[0x13]=[2,8,`SLO (%d),Y`]; // undocumented
-        this.instructionTable[0x14]=[2,4,`NOP %d,X`]; // undocumented
+        this.instructionTable[0x13]=[2,8,`SLO (%d),Y`]; // undocumented - tested
+        this.instructionTable[0x14]=[2,4,`NOP %d,X`]; // undocumented - tested
         this.instructionTable[0x15]=[2,4,`ORA %d,X`];
         this.instructionTable[0x16]=[2,6,`ASL %d,X`];
-        this.instructionTable[0x17]=[2,6,`SLO %d,X`]; // undocumented
+        this.instructionTable[0x17]=[2,6,`SLO %d,X`]; // undocumented - tested
         this.instructionTable[0x18]=[1,2,`CLC`];
         this.instructionTable[0x19]=[3,4,`ORA %d,Y`];
-        this.instructionTable[0x1A]=[1,2,`NOP`]; // undocumented
-        this.instructionTable[0x1B]=[3,7,`SLO %d,Y`]; // undocumented
-        this.instructionTable[0x1C]=[3,4,`NOP %d,X`]; // undocumented
+        this.instructionTable[0x1A]=[1,2,`NOP`]; // undocumented - tested
+        this.instructionTable[0x1B]=[3,7,`SLO %d,Y`]; // undocumented - tested
+        this.instructionTable[0x1C]=[3,4,`NOP %d,X`]; // undocumented - tested
         this.instructionTable[0x1D]=[3,4,`ORA %d,X`];
         this.instructionTable[0x1E]=[3,7,`ASL %d,X`];
-        this.instructionTable[0x1F]=[3,7,`SLO %d,X`]; // undocumented
+        this.instructionTable[0x1F]=[3,7,`SLO %d,X`]; // undocumented - tested
 
         this.instructionTable[0x20]=[3,6,`JSR %d`];
         this.instructionTable[0x21]=[2,6,`AND %d`];
@@ -70,6 +70,7 @@ class cpu6510
         this.instructionTable[0x28]=[1,4,`PLP`];
         this.instructionTable[0x29]=[2,2,`AND %d`];
         this.instructionTable[0x2A]=[1,2,`ROL`];
+        this.instructionTable[0x2B]=[2,2,`ANC %d`]; // undocumented - tested
         this.instructionTable[0x2C]=[3,4,`BIT %d`];
         this.instructionTable[0x2D]=[3,4,`AND %d`];
         this.instructionTable[0x2E]=[3,6,`ROL %d`];
@@ -81,34 +82,35 @@ class cpu6510
         this.instructionTable[0x38]=[1,2,`SEC`];
         this.instructionTable[0x39]=[3,4,`AND %d,Y`];
 
-        this.instructionTable[0x3C]=[1,2,`NOP`];
+        this.instructionTable[0x3C]=[3,4,`NOP %d,X`]; // undocumented - tested
         this.instructionTable[0x3D]=[3,4,`AND %d`];
 
         this.instructionTable[0x3E]=[3,7,`ROL %d,X`];
 
         this.instructionTable[0x40]=[1,6,`RTI`];
         this.instructionTable[0x41]=[2,6,`EOR (%d,X)`];
-        this.instructionTable[0x44]=[2,3,`NOP %d`]; // undocumented
+        this.instructionTable[0x44]=[2,3,`NOP %d`]; // undocumented - tested
         this.instructionTable[0x45]=[2,3,`EOR %d`];
         this.instructionTable[0x46]=[2,5,`LSR %d`];
+        this.instructionTable[0x47]=[2,5,`SRE %d`]; // undocumented - tested
         this.instructionTable[0x48]=[1,3,`PHA`];
         this.instructionTable[0x49]=[2,2,`EOR %d`];
         this.instructionTable[0x4A]=[1,2,`LSR`];
-        this.instructionTable[0x4B]=[2,2,`ALR %d`]; // undocumented
+        this.instructionTable[0x4B]=[2,2,`ALR %d`]; // undocumented - tested
         this.instructionTable[0x4C]=[3,3,`JMP %d`];
         this.instructionTable[0x4D]=[3,4,`EOR %d`];
         this.instructionTable[0x4E]=[3,6,`LSR %d`];
 
-        this.instructionTable[0x50]=[2,2,`BVC %d`];//*
-        this.instructionTable[0x51]=[2,5,`EOR (%d),Y`];//*
-        this.instructionTable[0x55]=[2,4,`EOR %d,X`];//*
-        this.instructionTable[0x56]=[2,6,`LSR %d,X`];//*
-        this.instructionTable[0x58]=[1,2,`CLI`];//*
-        this.instructionTable[0x59]=[3,4,`EOR %d,Y`];//*
-        this.instructionTable[0x5A]=[1,2,`NOP`]; // undocumented
-        this.instructionTable[0x5D]=[3,4,`EOR %d,X`];//*
-        this.instructionTable[0x5E]=[3,7,`LSR %d,X`];//*
-        this.instructionTable[0x5F]=[3,7,`SRE %d,X`];//*
+        this.instructionTable[0x50]=[2,2,`BVC %d`];
+        this.instructionTable[0x51]=[2,5,`EOR (%d),Y`];
+        this.instructionTable[0x55]=[2,4,`EOR %d,X`];
+        this.instructionTable[0x56]=[2,6,`LSR %d,X`];
+        this.instructionTable[0x58]=[1,2,`CLI`];
+        this.instructionTable[0x59]=[3,4,`EOR %d,Y`];
+        this.instructionTable[0x5A]=[1,2,`NOP`]; // undocumented - tested
+        this.instructionTable[0x5D]=[3,4,`EOR %d,X`];
+        this.instructionTable[0x5E]=[3,7,`LSR %d,X`];
+        this.instructionTable[0x5F]=[3,7,`SRE %d,X`]; // undocumented - tested
 
         this.instructionTable[0x60]=[1,6,`RTS`];
         this.instructionTable[0x61]=[2,6,`ADC (%d,X)`];
@@ -119,10 +121,10 @@ class cpu6510
         this.instructionTable[0x6A]=[1,2,`ROR`];
         this.instructionTable[0x6C]=[3,5,`JMP (%d)`];
         this.instructionTable[0x6D]=[3,4,`ADC %d`];
-        this.instructionTable[0x6E]=[3,4,`ROR %d`];
+        this.instructionTable[0x6E]=[3,6,`ROR %d`];
 
         this.instructionTable[0x70]=[2,2,`BVS %d`];
-        this.instructionTable[0x71]=[2,5,`ADC (%d),Y`];//*
+        this.instructionTable[0x71]=[2,5,`ADC (%d),Y`];
         this.instructionTable[0x75]=[2,4,`ADC %d`];
         this.instructionTable[0x76]=[2,6,`ROR %d,X`];
         this.instructionTable[0x78]=[1,2,`SEI`];
@@ -132,16 +134,17 @@ class cpu6510
 
         this.instructionTable[0x80]=[1,2,`SKB`];
         this.instructionTable[0x81]=[2,6,`STA %d`];
-        this.instructionTable[0x82]=[2,2,`NOP %d`]; // undocumented
+        this.instructionTable[0x82]=[2,2,`NOP %d`]; // undocumented - tested
         this.instructionTable[0x84]=[2,3,`STY %d`];
         this.instructionTable[0x85]=[2,3,`STA %d`];
         this.instructionTable[0x86]=[2,3,`STX %d`];
-        this.instructionTable[0x87]=[2,3,`SAX %d`]; // undocumented
+        this.instructionTable[0x87]=[2,3,`SAX %d`]; // undocumented - tested
         this.instructionTable[0x88]=[1,2,`DEY`];
         this.instructionTable[0x8A]=[1,2,`TXA`];
         this.instructionTable[0x8C]=[3,4,`STY %d`];
         this.instructionTable[0x8E]=[3,4,`STX %d`];
         this.instructionTable[0x8D]=[3,4,`STA %d`];
+        this.instructionTable[0x8F]=[3,4,`SAX %d`]; // undocumented - tested
 
         this.instructionTable[0x90]=[2,2,`BCC %d`];
         this.instructionTable[0x91]=[2,6,`STA %d`];
@@ -159,52 +162,53 @@ class cpu6510
         this.instructionTable[0xA4]=[2,3,`LDY %d`];
         this.instructionTable[0xA5]=[2,3,`LDA %d`];
         this.instructionTable[0xA6]=[2,3,`LDX %d`];
-        this.instructionTable[0xA7]=[2,3,`LAX %d`];
+        this.instructionTable[0xA7]=[2,3,`LAX %d`]; // undocumented - tested
         this.instructionTable[0xA8]=[1,2,`TAY`];
         this.instructionTable[0xA9]=[2,2,`LDA %d`];
         this.instructionTable[0xAA]=[1,2,`TAX`];
+        this.instructionTable[0xAB]=[2,2,`LAX %d`]; // undocumented - tested
         this.instructionTable[0xAC]=[3,4,`LDY %d`];
-        this.instructionTable[0xAE]=[3,4,`LDX %d`];
-        this.instructionTable[0xAF]=[3,4,`LAX %d`]; // undocumented
         this.instructionTable[0xAD]=[3,4,`LDA %d`];
+        this.instructionTable[0xAE]=[3,4,`LDX %d`];
+        this.instructionTable[0xAF]=[3,4,`LAX %d`]; // undocumented - tested
 
-        this.instructionTable[0xB0]=[2,2,`BCS %d`];//*
-        this.instructionTable[0xB1]=[2,5,`LDA (%d),Y`];//*
-        this.instructionTable[0xB3]=[2,5,`LAX (%d),Y`];//*
-        this.instructionTable[0xB4]=[2,4,`LDY %d,X`];//*
-        this.instructionTable[0xB5]=[2,4,`LDA %d,X`];//*
-        this.instructionTable[0xB6]=[2,4,`LDX %d,Y`];//*
-        this.instructionTable[0xB7]=[1,2,`LAX %d`]; // undocumented
-        this.instructionTable[0xB8]=[1,2,`CLV`];//*
-        this.instructionTable[0xB9]=[3,4,`LDA %d,Y`];//*
-        this.instructionTable[0xBA]=[1,2,`TSX`];//*
-        this.instructionTable[0xBC]=[3,4,`LDY %d,X`];//*
-        this.instructionTable[0xBD]=[3,4,`LDA %d,X`];//*
-        this.instructionTable[0xBE]=[3,4,`LDX %d,Y`];//*
+        this.instructionTable[0xB0]=[2,2,`BCS %d`];
+        this.instructionTable[0xB1]=[2,5,`LDA (%d),Y`];
+        this.instructionTable[0xB3]=[2,5,`LAX (%d),Y`]; // undocumented - tested
+        this.instructionTable[0xB4]=[2,4,`LDY %d,X`];
+        this.instructionTable[0xB5]=[2,4,`LDA %d,X`];
+        this.instructionTable[0xB6]=[2,4,`LDX %d,Y`];
+        this.instructionTable[0xB7]=[2,4,`LAX %d`]; // undocumented - tested
+        this.instructionTable[0xB8]=[1,2,`CLV`];
+        this.instructionTable[0xB9]=[3,4,`LDA %d,Y`];
+        this.instructionTable[0xBA]=[1,2,`TSX`];
+        this.instructionTable[0xBC]=[3,4,`LDY %d,X`];
+        this.instructionTable[0xBD]=[3,4,`LDA %d,X`];
+        this.instructionTable[0xBE]=[3,4,`LDX %d,Y`];
 
         this.instructionTable[0xC0]=[2,2,`CPY %d`];
         this.instructionTable[0xC1]=[2,6,`CMP (%d,X)`];
-        this.instructionTable[0xC3]=[2,8,`DCP (%d,X)`]; // undocumented
+        this.instructionTable[0xC3]=[2,8,`DCP (%d,X)`]; // undocumented - tested
         this.instructionTable[0xC4]=[2,3,`CPY %d`];
         this.instructionTable[0xC5]=[2,3,`CMP %d`];
         this.instructionTable[0xC6]=[2,5,`DEC %d`];
-        this.instructionTable[0xC7]=[2,5,`DCP %d`]; // undocumented
+        this.instructionTable[0xC7]=[2,5,`DCP %d`]; // undocumented - tested
         this.instructionTable[0xC8]=[1,2,`INY`];
         this.instructionTable[0xC9]=[2,2,`CMP %d`];
         this.instructionTable[0xCA]=[1,2,`DEX`];
-        this.instructionTable[0xCB]=[2,2,`AXS %d`]; // FIXXX num cycles
+        this.instructionTable[0xCB]=[2,2,`AXS %d`]; // FIXXX num cycles - undocumented - tested
         this.instructionTable[0xCC]=[3,4,`CPY %d`];
         this.instructionTable[0xCD]=[3,4,`CMP %d`];
         this.instructionTable[0xCE]=[3,6,`DEC %d`];
 
-        this.instructionTable[0xD0]=[2,2,`BNE %d`];//*
-        this.instructionTable[0xD1]=[2,5,`CMP (%d),Y`];//*
-        this.instructionTable[0xD4]=[2,4,`NOP %d,X`]; // undocumented
+        this.instructionTable[0xD0]=[2,2,`BNE %d`];
+        this.instructionTable[0xD1]=[2,5,`CMP (%d),Y`];
+        this.instructionTable[0xD4]=[2,4,`NOP %d,X`]; // undocumented - tested
         this.instructionTable[0xD5]=[2,4,`CMP %d,X`];
         this.instructionTable[0xD6]=[2,6,`DEC %d,X`];
         this.instructionTable[0xD8]=[1,2,`CLD`];
         this.instructionTable[0xD9]=[3,4,`CMP %d,Y`];
-        this.instructionTable[0xDD]=[3,4,`CMP %d,X`];//*
+        this.instructionTable[0xDD]=[3,4,`CMP %d,X`];
         this.instructionTable[0xDE]=[3,7,`DEC %d,X`];
 
         this.instructionTable[0xE0]=[2,2,`CPX %d`];
@@ -215,22 +219,23 @@ class cpu6510
         this.instructionTable[0xE8]=[1,2,`INX`];
         this.instructionTable[0xE9]=[2,2,`SBC %d`];
         this.instructionTable[0xEA]=[1,2,`NOP`];
-        this.instructionTable[0xEB]=[2,2,`SBC %d`]; // undocumented
+        this.instructionTable[0xEB]=[2,2,`SBC %d`]; // undocumented - tested
         this.instructionTable[0xEC]=[3,4,`CPX %d`];
         this.instructionTable[0xED]=[3,4,`SBC %d`];
         this.instructionTable[0xEE]=[3,6,`INC %d`];
+        this.instructionTable[0xEF]=[3,6,`ISC %d`]; // undocumented - tested
 
         this.instructionTable[0xF0]=[2,2,`BEQ %d`];
-        this.instructionTable[0xF1]=[2,5,`SBC (%d),Y`];//*
+        this.instructionTable[0xF1]=[2,5,`SBC (%d),Y`];
         this.instructionTable[0xF5]=[2,4,`SBC %d,X`];
         this.instructionTable[0xF6]=[2,6,`INC %d,X`];
         this.instructionTable[0xF8]=[1,2,`SED`];
         this.instructionTable[0xF9]=[3,4,`SBC %d`];
-        this.instructionTable[0xFA]=[1,2,`NOP`]; // undocumented
-        this.instructionTable[0xFC]=[3,4,`NOP %d`];
+        this.instructionTable[0xFA]=[1,2,`NOP`]; // undocumented - tested
+        this.instructionTable[0xFC]=[3,4,`NOP %d,X`]; // undocumented - tested
         this.instructionTable[0xFD]=[3,4,`SBC %d,X`];
         this.instructionTable[0xFE]=[3,7,`INC %d,X`];
-        this.instructionTable[0xFF]=[3,7,`ISC %d,X`]; // undocumented
+        this.instructionTable[0xFF]=[3,7,`ISC %d,X`]; // undocumented - tested
     }
 
     powerUp()
@@ -359,6 +364,17 @@ class cpu6510
         {
             return -1;
         }
+    }
+
+    setFlags(v)
+    {
+        this.flagsC=(v>>0)&1;        
+        this.flagsZ=(v>>1)&1;        
+        this.flagsI=(v>>2)&1;        
+        this.flagsD=(v>>3)&1;        
+        this.flagsB=(v>>4)&1;        
+        this.flagsV=(v>>6)&1;        
+        this.flagsN=(v>>7)&1;        
     }
 
     getFlagsString()
@@ -670,15 +686,12 @@ class cpu6510
             }
             case 0x03:
             {
-                // SLO (zp,X) undocumented
-                //console.log("Undoc opcode");
+                // SLO (ind,X) undocumented
                 var operand=this.mmu.readAddr(this.pc+1);
-                var iop = this.mmu.readAddr((operand+this.x)&0xff);
+                var indi = this.mmu.getWrappedAddr((operand + this.x) & 0xff);
+                var tmp = this.mmu.readAddr(indi);
 
-                this.mmu.writeAddr(operand,(iop*2)&0xff);
-                this.a=this.a|((iop*2)&0xff);
-
-                if ((this.a & 0x80)==0x80) // FIXXX?
+                if ((tmp & 0x80)==0x80)
                 {
                     this.flagsC=1;
                 }
@@ -687,13 +700,19 @@ class cpu6510
                     this.flagsC=0;
                 }
 
+                tmp<<=1;
+                tmp&=0xff;
+
+                this.a=this.a|tmp;
                 this.doFlagsNZ(this.a);            
+
+                this.mmu.writeAddr(indi,tmp);
                 break;
             }
             case 0x04:
             {
                 // NOP zeropage undocumented
-                console.log("Undoc opcode 0x04");
+                //console.log("Undoc opcode 0x04");
                 break;
             }
             case 0x05:
@@ -800,7 +819,6 @@ class cpu6510
             case 0x0B:
             {
                 // ANC immediate undocumented
-                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 this.a&=operand;
 
@@ -856,14 +874,11 @@ class cpu6510
             case 0x0F:
             {
                 // SLO absolute undocumented
-                //console.log("Undoc opcode");
-                var operand=this.mmu.readAddr(this.pc+1);
-                var iop = this.mmu.readAddr(operand&0xff);
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
+                var tmp = this.mmu.readAddr(operand);
 
-                this.mmu.writeAddr(operand,(iop*2)&0xff);
-                this.a=this.a|((iop*2)&0xff);
-
-                if ((this.a & 0x80)==0x80) // FIXXX?
+                if (tmp & 0x80)
                 {
                     this.flagsC=1;
                 }
@@ -872,7 +887,12 @@ class cpu6510
                     this.flagsC=0;
                 }
 
+                tmp<<=1; tmp&=0xff;
+                this.a|=tmp;
+
                 this.doFlagsNZ(this.a); 
+
+                this.mmu.writeAddr(operand,tmp);
                 break;
             }
             case 0x10:
@@ -911,17 +931,12 @@ class cpu6510
             case 0x13:
             {
                 // SLO (operand),Y undocumented
-                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var address=this.mmu.readAddr16bit(operand);
                 var finalAddress=(address+this.y)&0xffff;
+                var tmp=this.mmu.readAddr(finalAddress);
 
-                var iop=this.mmu.readAddr(finalAddress);
-
-                this.mmu.writeAddr(finalAddress,(iop*2)&0xff);
-                this.a=this.a|((iop*2)&0xff);
-
-                if ((this.a & 0x80)==0x80) // FIXXX?
+                if (tmp & 0x80)
                 {
                     this.flagsC=1;
                 }
@@ -930,7 +945,11 @@ class cpu6510
                     this.flagsC=0;
                 }
 
+                tmp<<=1; tmp&=0xff;
+                this.a|=tmp;
                 this.doFlagsNZ(this.a);
+
+                this.mmu.writeAddr(finalAddress,tmp);
                 break;
             }
             case 0x14:
@@ -970,14 +989,10 @@ class cpu6510
             case 0x17:
             {
                 // SLO zeropage,X undocumented
-                //console.log("Undoc opcode");
-                var operand=this.mmu.readAddr(this.pc+1);
-                var iop = this.mmu.readAddr((operand+this.x)&0xff);
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                var tmp = this.mmu.readAddr((operand+this.x)&0xff);
 
-                this.mmu.writeAddr(operand,(iop*2)&0xff);
-                this.a=this.a|((iop*2)&0xff);
-
-                if ((this.a & 0x80)==0x80) // FIXXX?
+                if (tmp & 0x80)
                 {
                     this.flagsC=1;
                 }
@@ -986,7 +1001,12 @@ class cpu6510
                     this.flagsC=0;
                 }
 
+                tmp<<=1; tmp&=0xff;
+                this.a|=tmp;
+
                 this.doFlagsNZ(this.a);
+
+                this.mmu.writeAddr((operand+this.x)&0xff,tmp);
                 break;
             }
             case 0x18:
@@ -1015,14 +1035,10 @@ class cpu6510
             case 0x1B:
             {
                 // SLO abs,Y undocumented
-                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr16bit(this.pc+1);
-                var iop = this.mmu.readAddr((operand+this.y)&0xffff);
+                var tmp = this.mmu.readAddr((operand+this.y)&0xffff);
 
-                this.mmu.writeAddr(operand,(iop*2)&0xff);
-                this.a=this.a|((iop*2)&0xff);
-
-                if ((this.a & 0x80)==0x80) // FIXXX?
+                if (tmp & 0x80)
                 {
                     this.flagsC=1;
                 }
@@ -1031,7 +1047,12 @@ class cpu6510
                     this.flagsC=0;
                 }
 
+                tmp<<=1; tmp&=0xff;
+                this.a|=tmp;
+
                 this.doFlagsNZ(this.a);
+
+                this.mmu.writeAddr((operand+this.y)&0xffff,tmp);
                 break;
             }
             case 0x1C:
@@ -1077,15 +1098,11 @@ class cpu6510
             case 0x1F:
             {
                 // SLO abs,X undocumented
-                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
-                var iop = this.mmu.readAddr((operand+this.x)&0xffff);
+                var tmp = this.mmu.readAddr((operand+this.x)&0xffff);
 
-                this.mmu.writeAddr(operand,(iop*2)&0xff);
-                this.a=this.a|((iop*2)&0xff);
-
-                if ((this.a & 0x80)==0x80) // FIXXX?
+                if (tmp & 0x80)
                 {
                     this.flagsC=1;
                 }
@@ -1094,24 +1111,28 @@ class cpu6510
                     this.flagsC=0;
                 }
 
+                tmp<<=1; tmp&=0xff;
+                this.a|=tmp;
+
                 this.doFlagsNZ(this.a);
+
+                this.mmu.writeAddr((operand+this.x)&0xffff,tmp);
                 break;
             }
             case 0x20:
             {
                 // JSR absolute
-                this.mmu.writeAddr(0x100+this.sp,((this.pc+2)>>8)&0xff);
-
+                this.mmu.writeAddr(0x100|(this.sp&0xff),((this.pc+2)>>8)&0xff);
                 this.sp--;
                 if (this.sp<0) this.sp=0xff;
 
-                this.mmu.writeAddr(0x100+this.sp,(this.pc+2)&0xff);
-
-                this.sp--;
-                if (this.sp<0) this.sp=0xff;
-
-                //var jumpAddress=this.mmu.readAddr16bit(this.pc+1);
                 var jumpAddress=this.mmu.readAddr((this.pc+1)&0xffff);
+
+                this.mmu.writeAddr(0x100|(this.sp&0xff),(this.pc+2)&0xff);
+
+                this.sp--;
+                if (this.sp<0) this.sp=0xff;
+
                 jumpAddress|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
 
                 this.pc=jumpAddress;
@@ -1236,6 +1257,24 @@ class cpu6510
                 if (seventh != 0)
                 {
                     // set carry
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                this.doFlagsNZ(this.a);
+                break;
+            }
+            case 0x2B:
+            {
+                // ANC immediate undocumented
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                this.a&=operand;
+
+                if ((this.a & 0x80)==0x80)
+                {
                     this.flagsC=1;
                 }
                 else
@@ -1373,8 +1412,10 @@ class cpu6510
             }
             case 0x3c:
             {
-                // NOP undocumented
-                //console.log("Undoc opcode");
+                // NOP absolute,X undocumented
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0x3d:
@@ -1439,7 +1480,6 @@ class cpu6510
 
                 this.pc = (pclo) | (pchi << 8);
                 
-                elapsedCycles+= 6;
                 jumped=true;
                 break;
             }
@@ -1490,6 +1530,31 @@ class cpu6510
                 this.doFlagsNZ(theb);
                 break;
             }
+            case 0x47:
+            {
+                // SRE zeropage undocumented 
+                var operand=this.mmu.readAddr(this.pc+1);
+                var tmp = this.mmu.readAddr(operand);
+
+                if (tmp & 0x01)
+                {
+                    this.flagsC=1;
+                }
+                else
+                {
+                    this.flagsC=0;
+                }
+
+                tmp >>= 1;
+                tmp &= 0x7f;
+
+                this.a^=tmp;
+
+                this.doFlagsNZ(this.a);
+
+                this.mmu.writeAddr(operand,tmp);
+                break;
+            }
             case 0x48:
             {
                 // PHA
@@ -1531,7 +1596,7 @@ class cpu6510
             {
                 // ALR immediate undocumented
                 //console.log("Undoc opcode");
-                var operand=this.mmu.readAddr(this.pc+1);
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 this.a&=operand;
 
                 if ((this.a & 0x01)!=0)
@@ -1636,7 +1701,7 @@ class cpu6510
             case 0x56:
             {
                 // LSR (logical shift right)
-                var operand=this.mmu.readAddr(this.pc+1);
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 var theb = this.mmu.readAddr((operand+this.x)&0xff);
 
                 if ((theb & 0x01)!=0)
@@ -1686,6 +1751,7 @@ class cpu6510
                 var iop=this.mmu.readAddr((operand+this.x)&0xffff);
                 this.a^=iop;
                 this.doFlagsNZ(this.a);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0x5E:
@@ -1713,13 +1779,12 @@ class cpu6510
             }
             case 0x5F:
             {
-                // SRE absolute,X undocumented FIXXX
-                //console.log("Undoc opcode");
+                // SRE absolute,X undocumented 
                 var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
-                var origByte = this.mmu.readAddr(operand+this.x);
-                var theb=origByte;
-                if ((theb & 0x01)!=0)
+                var tmp = this.mmu.readAddr((operand+this.x)&0xffff);
+
+                if (tmp & 0x01)
                 {
                     this.flagsC=1;
                 }
@@ -1728,14 +1793,14 @@ class cpu6510
                     this.flagsC=0;
                 }
 
-                theb >>= 1;
-                theb &= 0x7f;
+                tmp >>= 1;
+                tmp &= 0x7f;
 
-                this.mmu.writeAddr(operand+this.x,theb);
-
-                this.a^=origByte;
+                this.a^=tmp;
 
                 this.doFlagsNZ(this.a);
+
+                this.mmu.writeAddr((operand+this.x)&0xffff,tmp);
                 break;
             }
             case 0x60:
@@ -2122,6 +2187,14 @@ class cpu6510
                 this.mmu.writeAddr(operand,this.x);
                 break;
             }
+            case 0x8f:
+            {
+                // SAX abs undocumented
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
+                this.mmu.writeAddr(operand,this.a&this.x);
+                break;
+            }
             case 0x90:
             {
                 // BCC offset
@@ -2279,6 +2352,16 @@ class cpu6510
                 this.doFlagsNZ(this.x);
                 break;
             }
+            case 0xAB:
+            {
+                // LAX immediate
+                var zpval=this.mmu.readAddr(this.pc+1);
+                var tmp=((this.a|0xee)&zpval)&0xff;
+                this.a=tmp;
+                this.x=tmp;
+                this.doFlagsNZ(this.a);
+                break;
+            }
             case 0xAC:
             {
                 // LDY absolute
@@ -2387,8 +2470,7 @@ class cpu6510
             case 0xB7:
             {
                 // LAX zeropage,y undocumented
-                //console.log("Undoc opcode");
-                var operand=this.mmu.readAddr(this.pc+1);
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 var zpval=this.mmu.readAddr((operand + this.y)&0xff);
                 
                 this.a=zpval;
@@ -2429,7 +2511,7 @@ class cpu6510
                 var addressToRead=(operand+this.x)&0xffff;
                 this.y=this.mmu.readAddr(addressToRead);
                 this.doFlagsNZ(this.y);
-                elapsedCycles+=this.pageCross(operand,this.y);
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0xbd:
@@ -2582,8 +2664,7 @@ class cpu6510
             case 0xCB:
             {
                 // ASX or SBX, undocumented, X = A & X - #{imm}
-                //console.log("Undoc opcode");
-                var operand=this.mmu.readAddr(this.pc+1);
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 
                 const tmp = (this.a & this.x) - operand;
 
@@ -2620,19 +2701,14 @@ class cpu6510
                 // BNE offset
                 if (this.flagsZ==0)
                 {
-                    var oldPc=this.pc;
                     var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                     var branchAmount=this.calcRelativeBranch(operand);
 
-                    if (branchAmount!=0)
-                    {
-                        var newaddr = this.pc + 2 + branchAmount;
-                        elapsedCycles += (1 + this.calcPagecrossPenalty2(newaddr,oldPc));
+                    elapsedCycles += (1 + this.calcPagecrossPenalty2(this.pc+branchAmount+2,this.pc));
 
-                        this.pc+=branchAmount+2;
-                        this.pc&=0xffff;
-                        jumped=true;
-                    }
+                    this.pc+=branchAmount+2;
+                    this.pc&=0xffff;
+                    jumped=true;
                 }
                 break;
             }
@@ -2829,6 +2905,18 @@ class cpu6510
                 this.doFlagsNZ(curval);
                 break;
             }
+            case 0xEF:
+            {
+                // ISC absolute undocumented
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
+                var curval=this.mmu.readAddr(operand&0xffff);
+                curval+=1;
+                if (curval>0xff) curval=0;
+                this.doSbc(curval);
+                this.mmu.writeAddr(operand&0xffff,curval);
+                break;
+            }
             case 0xF0:
             {
                 // BEQ
@@ -2901,8 +2989,9 @@ class cpu6510
             case 0xFC:
             {
                 // NOP abs, x undocumented
-                //console.log("Undoc opcode");
-                var operand=this.mmu.readAddr16bit(this.pc+1);
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
+                elapsedCycles+=this.pageCross(operand,this.x);
                 break;
             }
             case 0xFD:
@@ -2930,15 +3019,13 @@ class cpu6510
             case 0xFF:
             {
                 // ISC absolute,X undocumented
-                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr((this.pc+1)&0xffff);
                 operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
-                var curval=this.mmu.readAddr(operand+this.x);
+                var curval=this.mmu.readAddr((operand+this.x)&0xffff);
                 curval+=1;
                 if (curval>0xff) curval=0;
-                this.mmu.writeAddr(operand+this.x,curval);
                 this.doSbc(curval);
-                this.doFlagsNZ(curval);
+                this.mmu.writeAddr((operand+this.x)&0xffff,curval);
                 break;
             }
             default:
@@ -2953,7 +3040,11 @@ class cpu6510
             console.log("CPU 6510: x,y,a,pc or sp undefined "+this.x+" "+this.y+" "+this.a+" "+this.pc+" "+this.sp);
         }
 
-        if (!jumped) this.pc+=this.instructionTable[nextOpcode][0];
+        if (!jumped) 
+        {
+            this.pc+=this.instructionTable[nextOpcode][0];
+            this.pc&=0xffff;
+        }
 
         this.totCycles+=elapsedCycles;
         this.totCycles+=this.instructionTable[nextOpcode][1];
