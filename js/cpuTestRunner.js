@@ -107,7 +107,7 @@ class cpuTestRunner
                     const val=this.theMMU.readAddr(this.testJsonObject[testCaseNum].final.ram[v][0]);
                     if (val!=this.testJsonObject[testCaseNum].final.ram[v][1])
                     {
-                        console.log("testRunner::memory location ["+this.testJsonObject[testCaseNum].final.ram[v][0]+
+                        console.log("testRunner::test case ["+this.testJsonObject[testCaseNum].name+"] - memory location ["+this.testJsonObject[testCaseNum].final.ram[v][0]+
                         "] value ["+val+"] different from test case ["+this.testJsonObject[testCaseNum].final.ram[v][1]+"]");
                         testFailed=true;
                     }

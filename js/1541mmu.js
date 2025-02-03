@@ -20,8 +20,6 @@ class disk1541mmu
         var thisInstance=this;
         $.ajax({
             url: "roms/dos1541-325302-01+901229-05.rom",type: "GET",processData: false,dataType: "binary",
-            //url: "roms/1541C.251968-02.bin",type: "GET",processData: false,dataType: "binary",
-            //url: "roms/1541-II.251968-03.bin",type: "GET",processData: false,dataType: "binary",
             success: function(data) 
             {
                 var arrayBuffer;

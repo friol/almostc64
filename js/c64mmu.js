@@ -115,33 +115,34 @@ class c64mmu
         });        
     }
 
+    setCart(aCart)
+    {
+        this.theCart=aCart;
+    }
+
     setProcessorPortConfig()
     {
         var port = ((~this.dataDirReg) | (this.processorPortReg&0x7))&0xff;
 
         /*console.log("pport conf: ["+this.dataDirReg.toString(16)+"] ["+this.processorPortReg.toString(16)+"]")
         */
-/*
-        if ( ((port & 7) == 3) || ((port & 7) == 7)) this.basic_in=true;
-        else this.basic_in=false;
-        
-        if ( ((port & 7) == 2) || ((port & 7) == 3) || ((port & 7) == 6) || ((port & 7) == 7)) this.kernal_in=true;
-        else this.kernal_in=false;
 
-        if ( ((port & 7) == 1) || ((port & 7) == 2) || ((port & 7) == 3)) this.char_in=true;
-        else this.char_in=false;
-
-        if ( ((port & 7) == 5) || ((port & 7) == 6) || ((port & 7) == 7)) this.io_in = true;
-        else this.io_in = false;
-*/
         if ((port & 3) == 3) this.basic_in=true;
         else this.basic_in=false;
 
         if ((port & 2) != 0) this.kernal_in=true;
         else this.kernal_in=false;
 
-        if (((port & 3) != 0) && ((port & 4) == 0)) this.char_in=true;
-        else this.char_in=false;
+        if ((this.theCart==undefined)||(this.theCart.lineGAME))
+        {
+            if (((port & 3) != 0) && ((port & 4) == 0)) this.char_in=true;
+            else this.char_in=false;
+        } 
+        else 
+        {
+            if (((port & 2) != 0) && ((port & 4) == 0)) this.char_in=true;
+            else this.char_in=false;
+        }
 
         if (((port & 3) != 0) && ((port & 4) != 0)) this.io_in = true;
         else this.io_in = false;        
@@ -203,20 +204,42 @@ class c64mmu
         }
         else if ((addr >= 0x8000) && (addr <= 0x9fff))
         {
-            // $8000-$9FFF, optional cartridge rom or RAM            
-            return this.ram64k[addr];
-        }
-        else if ((addr >= 0xa000) && (addr <= 0xbfff))
-        {
-            if (!this.basic_in)
+            // $8000-$9FFF, optional cartridge rom or RAM    
+            
+            if (this.theCart.lineEXROM==0)
             {
-                // fallthrough ram
-                return this.ram64k[addr];
+                return this.theCart.banks[0][addr-0x8000];
             }
             else
             {
-                // basic rom
-                return this.basicROM[addr - 0xa000];
+                return this.ram64k[addr];
+            }
+        }
+        else if ((addr >= 0xa000) && (addr <= 0xbfff))
+        {
+			if ((this.theCart.lineEXROM==1) || (this.theCart.lineGAME==1)) 
+            {
+                if (!this.basic_in)
+                {
+                    // fallthrough ram
+                    return this.ram64k[addr];
+                }
+                else
+                {
+                    // basic rom
+                    return this.basicROM[addr - 0xa000];
+                }
+            }
+            else
+            {
+                if (this.kernal_in)
+                {
+                    return this.theCart.banks[0][(addr-0xa000)+0x2000];
+                }
+                else
+                {
+                    return this.ram64k[addr];
+                }
             }
         }        
         else if ((addr >= 0xc000) && (addr <= 0xcfff))

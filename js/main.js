@@ -4,8 +4,7 @@
 	Almost C64 emulator - (c) friol 2o21-2o25
 
 	IN PROGRESS:
-	- CPU undoc opcodes tests
-	- verify cycles
+	- THTests
 
 	TODO:
 	- spr/background collision
@@ -14,6 +13,7 @@
 	- sid filters
 
 	DONE:
+	- verify cycles in all covered instructions
 	- 1541 emulation, g64/partial d64 loading
 	- all documented opcodes tested against Lorenz test suite
 	- fix delta instruction c3
@@ -38,6 +38,7 @@ var glbMMU;
 var glbDiskCPU;
 var glbDiskMMU;
 var glbFdcController;
+var glbCart;
 var glbViaChip1,glbViaChip2;
 
 var filterStrength = 20;
@@ -52,31 +53,22 @@ var glbPlayColor="black";
 
 function runTHTests()
 {
-    const documentedOpcodes=[
-		0x10,0x11,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,0x20,0x21,0x24,0x25,0x26,0x28,0x29,0x2A,0x2C,0x2D,
+    const allOpcodes=[
+		/*0x10,0x11,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,0x20,0x21,0x24,0x25,0x26,0x28,0x29,0x2A,0x2C,0x2D,
 		0x2E,0x30,0x31,0x35,0x36,0x38,0x39,0x3C,0x3D,0x3E,0x40,0x41,0x44,0x45,0x46,0x47,0x48,0x49,0x4A,0x4B,0x4C,0x4D,0x4E,0x50,0x51,
 		0x55,0x56,0x58,0x59,0x5A,0x5D,0x5E,0x5F,0x60,0x61,0x65,0x66,0x68,0x69,0x6A,0x6C,0x6D,0x6E,0x70,0x71,0x75,0x76,0x78,0x79,0x7D,
 		0x7E,0x80,0x81,0x82,0x84,0x85,0x86,0x87,0x88,0x8A,0x8C,0x8E,0x8D,0x8F,0x90,0x91,0x94,0x95,0x96,0x98,0x99,0x9A,0x9D,0xA0,0xA1,
 		0xA2,0xA4,0xA5,0xA6,0xA7,0xA8,0xA9,0xAA,0xAB,0xAC,0xAD,0xAE,0xAF,0xB0,0xB1,0xB3,0xB4,0xB5,0xB6,0xB7,0xB8,0xB9,0xBA,0xBC,0xBD,
-		0xBE,0xC0,0xC1,0xC3,0xC4,0xC5,0xC6,0xC7,0xC8,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xD0,0xD1,0xD4,0xD5,0xD6,0xD8,0xD9,0xDD,0xDE,0xE0,
-		0xE1,0xE4,0xE5,0xE6,0xE8,0xE9,0xEA,0xEB,0xEC,0xED,0xEE,0xEF,0xF0,0xF1,0xF5,0xF6,0xF8,0xF9,0xFA,0xFC,0xFD,0xFE,0xFF
+		0xBE,0xC0,0xC1,0xC3,0xC4,0xC5,0xC6,0xC7,0xC8,0xC9,0xCA,0xCB,0xCC,0xCD,0xCE,0xcf,0xD0,0xD1,0xD4,0xD5,0xD6,0xD8,0xD9,0xDD,0xDE,0xE0,
+		0xE1,0xE4,0xE5,0xE6,0xE8,0xE9,0xEA,0xEB,0xEC,0xED,0xEE,0xEF,0xF0,0xF1,0xF5,0xF6,0xF8,0xF9,0xFA,0xFC,0xFD,0xFE,0xFF*/
+		0x9f
 	];
 
-	const undocumentedOpcodes=[
-	];
-
-    for (var testNum=0;testNum<documentedOpcodes.length;testNum++)
+    for (var testNum=0;testNum<allOpcodes.length;testNum++)
     {
-        const testJson="tomhartetests/"+documentedOpcodes[testNum].toString(16).padStart(2,'0')+".json";
+        const testJson="tomhartetests/"+allOpcodes[testNum].toString(16).padStart(2,'0')+".json";
         var testRunner=new cpuTestRunner(testJson);
     }
-
-    for (var testNum=0;testNum<undocumentedOpcodes.length;testNum++)
-	{
-		const testJson="tomhartetests/"+undocumentedOpcodes[testNum].toString(16).padStart(2,'0')+".json";
-		var testRunner=new cpuTestRunner(testJson);
-	}
-	
 }
 
 function waitForLoad()
@@ -114,6 +106,7 @@ function startupFunction()
 
 	var ciaChip1=new cia(1);
 	var ciaChip2=new cia(2);
+	ciaChip1.curJoystick=2;
 	var vicChip=new vic();
 	var sidChip=new sid();
 	glbMMU=new c64mmu(vicChip,ciaChip1,ciaChip2,sidChip);
@@ -122,6 +115,9 @@ function startupFunction()
 	ciaChip2.linkCpu(glbCPU);
 	vicChip.setCPU(glbCPU);
 	vicChip.setMMU(glbMMU);
+
+	glbCart=new cart();
+	glbMMU.setCart(glbCart);		
 
 	glbFdcController=new fdc1541();
 	glbViaChip1=new via(1,glbFdcController);
@@ -356,7 +352,7 @@ function startupFunction()
 		ctx.fillStyle = "black";
 		ctx.font = "10px Arial";
 		ctx.fillText("Welcome to the almostC64 emulator. To start, click on the \"play\" button.", 10, 20);
-		ctx.fillText("You can load prg/g64/d64 files or start a game/cracktro from the selector below.", 10, 32);
+		ctx.fillText("You can load prg/g64/d64/crt files or start a game/cracktro from the selector below.", 10, 32);
 		ctx.fillText("You can choose which joystick to use (joystick is controlled with cursor keys and CTRL).", 10, 44);
 		ctx.fillText("Moreover, the tilde or whatever key it is (the upper left key) unthrottles the emulation.", 10, 56);
 	}
@@ -369,10 +365,10 @@ function startupFunction()
 			{
 				globalListOfOpcodes=new Array();
 
-				glbDiskCPU.debugOpcodes(24,globalListOfOpcodes);
-				glbDiskCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
-				//glbCPU.debugOpcodes(24,globalListOfOpcodes);
-				//glbCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
+				//glbDiskCPU.debugOpcodes(24,globalListOfOpcodes);
+				//glbDiskCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
+				glbCPU.debugOpcodes(24,globalListOfOpcodes);
+				glbCPU.drawDebugInfo(globalListOfOpcodes,10,30,0);
 
 				//vicChip.simpleRenderer("mainCanvass",520,170,glbMMU,ciaChip2);
 
@@ -468,9 +464,9 @@ function handleFileUpload(fls)
 		var fname=document.getElementById("prgSelector").value;
 		let lowerFname=fname.toLowerCase();
 
-		if ((lowerFname.indexOf(".prg")<0)&&(lowerFname.indexOf(".g64")<0)&&(lowerFname.indexOf(".d64")<0)&&(lowerFname.indexOf(".")>0))
+		if ((lowerFname.indexOf(".prg")<0)&&(lowerFname.indexOf(".g64")<0)&&(lowerFname.indexOf(".d64")<0)&&(lowerFname.indexOf(".crt")<0))
 		{
-			alert("You can only load .prg, .g64 or .d64 files");
+			alert("You can only load .prg, .crt, .g64 or .d64 files");
 			return;
 		}
 
@@ -484,6 +480,11 @@ function handleFileUpload(fls)
 		else if (lowerFname.indexOf(".d64")>0)
 		{
 			glbFdcController.loadD64image(uint8ArrayNew,glbDiskCPU.totCycles);			
+		}
+		else if (lowerFname.indexOf(".crt")>0)
+		{
+			glbCart.loadCart(uint8ArrayNew);	
+			glbCPU.pc=64738; // reset c64
 		}
 		else if (lowerFname.indexOf(".prg")>0)
 		{
@@ -513,7 +514,6 @@ function handleFileUpload(fls)
 			}
 
 			// run program
-
 			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'r'}));},100);
 			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'r'}));},150);
 			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'u'}));},200);
@@ -523,7 +523,6 @@ function handleFileUpload(fls)
 			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keydown',{'key':'Enter'}));},400);
 			window.setTimeout(function() {document.dispatchEvent(new KeyboardEvent('keyup',{'key':'Enter'}));},450);
 		}
-	
 	};
 	fileReader.readAsArrayBuffer(fls[0]);	
 }

@@ -77,6 +77,7 @@ class cpu6510
 
         this.instructionTable[0x30]=[2,2,`BMI %d`];
         this.instructionTable[0x31]=[2,5,`AND (%d),Y`];
+        this.instructionTable[0x33]=[2,8,`RLA (%d),Y`]; // undocumented - tested
         this.instructionTable[0x35]=[2,4,`AND %d`];
         this.instructionTable[0x36]=[2,6,`ROL %d`];
         this.instructionTable[0x38]=[1,2,`SEC`];
@@ -155,6 +156,7 @@ class cpu6510
         this.instructionTable[0x99]=[3,5,`STA %d,Y`];
         this.instructionTable[0x9A]=[1,2,`TXS`];
         this.instructionTable[0x9D]=[3,5,`STA %d`];
+        this.instructionTable[0x9F]=[3,5,`SHA %d,Y`]; // undocumented - tested
 
         this.instructionTable[0xA0]=[2,2,`LDY %d`];
         this.instructionTable[0xA1]=[2,6,`LDA (%d,X)`];
@@ -200,6 +202,7 @@ class cpu6510
         this.instructionTable[0xCC]=[3,4,`CPY %d`];
         this.instructionTable[0xCD]=[3,4,`CMP %d`];
         this.instructionTable[0xCE]=[3,6,`DEC %d`];
+        this.instructionTable[0xCF]=[3,6,`DCP %d`]; // undocumented - tested
 
         this.instructionTable[0xD0]=[2,2,`BNE %d`];
         this.instructionTable[0xD1]=[2,5,`CMP (%d),Y`];
@@ -1362,6 +1365,33 @@ class cpu6510
                 elapsedCycles+=this.pageCross(indi,this.y);
                 break;
             }
+            case 0x33:
+            {
+                // RLA (indirect),Y
+                var operand=this.mmu.readAddr(this.pc+1);
+                var indi = this.mmu.readAddr16bit(operand);
+                var tmp=this.mmu.readAddr((indi+this.y)&0xffff);
+
+                var tmp2 = tmp & 0x80;
+
+                if (this.flagsC)
+                {
+                    tmp = (((tmp << 1) | 0x01));
+                }
+                else
+                {
+                    tmp<<=1;
+                }
+
+                tmp&=0xff;
+                
+                this.a&=tmp;
+                this.doFlagsNZ(this.a);
+                this.flagsC = tmp2;
+            
+                this.mmu.writeAddr((indi+this.y)&0xffff,tmp);
+                break;
+            }
             case 0x35:
             {
                 // AND zeropage,X
@@ -2271,6 +2301,28 @@ class cpu6510
                 this.mmu.writeAddr((operand+this.x)&0xffff,this.a);
                 break;
             }
+            case 0x9F:
+            {
+                // SHA absolute,Y undocumented, the hardest instruction on earth
+                var opcode2=this.mmu.readAddr((this.pc+1)&0xffff);
+                var opcode3=this.mmu.readAddr((this.pc+2)&0xffff);
+                
+                var alutmp=opcode2+this.y;
+                var adr=(opcode3<<8)+(alutmp&0xff);
+                
+                if (alutmp>0xff) 
+                {
+                    adr = (adr & 0xff) | ((adr+0x100) & 0xff00 & ((this.a&this.x)<<8));
+                    adr&=0xffff;
+                }
+
+                let value=this.a&this.x;
+                value&=(((opcode3)+1)&0xff); 
+                value&=0xff;
+                
+                this.mmu.writeAddr(adr,value);
+                break;
+            }
             case 0xa0:
             {
                 // LDY immediate
@@ -2623,7 +2675,6 @@ class cpu6510
             case 0xC7:
             {
                 // DCP zeropage undocumented
-                //console.log("Undoc opcode");
                 var operand=this.mmu.readAddr(this.pc+1);
                 var mval=this.mmu.readAddr(operand);
                 mval-=1;
@@ -2694,6 +2745,22 @@ class cpu6510
                 if (this.a>=iop) this.flagsC=1;
                 else this.flagsC=0;
                 this.doFlagsNZ(this.a-iop);
+                break;
+            }
+            case 0xCF:
+            {
+                // DCP absolute undocumented
+                var operand=this.mmu.readAddr((this.pc+1)&0xffff);
+                operand|=this.mmu.readAddr((this.pc+2)&0xffff)<<8;
+                var mval=this.mmu.readAddr(operand);
+                mval-=1;
+                if (mval<0) mval=0xff;
+                this.mmu.writeAddr(operand,mval);
+
+                if (this.a>=mval) this.flagsC=1;
+                else this.flagsC=0;
+                this.doFlagsNZ(this.a-mval);
+
                 break;
             }
             case 0xD0:
