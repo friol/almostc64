@@ -758,8 +758,8 @@ class vic
                 {
                     // sprite is multicolor
 
-                    colArray[1]=this.spriteMulticolor0_d025;
-                    colArray[3]=this.spriteMulticolor1_d026;
+                    colArray[1]=this.spriteMulticolor0_d025&0x0f;
+                    colArray[3]=this.spriteMulticolor1_d026&0x0f;
 
                     for (var ybyte=0;ybyte<21;ybyte++)
                     {

@@ -160,24 +160,25 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            //alert("readAddr::Bad address ["+addr+"]");
+            alert("readAddr::Bad address ["+addr+"]");
         }
-
-        addr&=0xffff;
 
         if (fromVIC)
         {
-            if ((addr>=0x1000)&&(addr<0x2000))
+            // this fixes the initial screens of Edge of Disgrace
+            var vicAddr=((3-this.ciaChip2.cia2getVICbank()) << 14)|(addr & 0x3fff);
+
+            if ((vicAddr>=0x1000)&&(vicAddr<0x2000))
             {
-                return this.chargenROM[addr-0x1000];
+                return this.chargenROM[(vicAddr-0x1000)];
             }
-            else if ((addr>=0x9000)&&(addr<0xa000))
+            else if ((vicAddr>=0x9000)&&(vicAddr<0xa000))
             {
-                return this.chargenROM[addr-0x9000];
+                return this.chargenROM[(vicAddr-0x9000)];
             }
             else
             {
-                return this.ram64k[addr];
+                return this.ram64k[vicAddr];
             }
         }
 
@@ -187,7 +188,7 @@ class c64mmu
         }
         else if (addr==0x0001)
         {
-            //return this.processorPortReg&0xff;
+            //return this.processorPortReg;
             return ((this.dataDirReg & this.processorPortReg) | ((~this.dataDirReg) & 0x17))&0xff;
         }
         else if ((addr>=0x0002)&&(addr<=0xff))
@@ -339,9 +340,8 @@ class c64mmu
             || (addr > 0xffff)
           ) 
         {
-            //alert("writeAddr::Bad address ["+addr+"]");
+            alert("writeAddr::Bad address ["+addr+"]");
         }
-        addr&=0xffff;
 
         if (addr==0x0000)
         {
